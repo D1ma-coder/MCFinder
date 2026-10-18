@@ -1,22 +1,30 @@
-MCFinder 0.4.1 adds an animated block-letter wordmark and brings native terrain-estimate searches, readable script coordinates in TUI, bilingual documentation, reproducible benchmarks and portable release builds.
+MCFinder 0.4.1
 
 ### Downloads
 
-- `x86_64-pc-windows-msvc.zip`: Windows x64.
-- `aarch64-apple-darwin.tar.gz`: macOS Apple Silicon.
-- `x86_64-apple-darwin.tar.gz`: macOS Intel.
+Each archive contains **only the compiled engine**:
 
-Each archive contains the executable, English/Russian README, handbook, examples and dependency notices. Verify the adjacent `.sha256` file. Binaries are unsigned; macOS binaries are not notarized. Distributed builds use portable CPU settings. GPU mode requires a compatible OpenCL driver; CPU-only does not.
+- `x86_64-pc-windows-msvc.zip` — Windows x64 (`mcfinder.exe`).
+- `aarch64-apple-darwin.tar.gz` — macOS Apple Silicon (`mcfinder`).
+- `x86_64-apple-darwin.tar.gz` — macOS Intel (`mcfinder`).
 
-### Start
+CPU builds use portable settings; GPU profiles are selected at runtime. Binaries are unsigned; macOS binaries are not notarized. CPU-only mode does not require OpenCL. License notices are embedded in the executable: `mcfinder licenses`.
 
-Run `mcfinder devices`, then `mcfinder search --script examples/scripts/high-mansion.rhai --experimental --cores 8 --ui tui --max-results 3 --count 1000000000`. On Windows use `.\mcfinder.exe`; on macOS use `./mcfinder`.
+### Changes
 
-The native terrain predicate was measured about 3.3× faster than the equivalent Rhai loop on Apple M2 Pro in an earlier fixed 100,000-seed comparison, with identical outputs. See the committed benchmark report for reproducible current scenarios; this is not a universal throughput claim.
+- Fixed MSVC strict-floating-point compilation without relaxing arithmetic settings.
+- Reorganized English/Russian README into a practical getting-started guide.
+- Added the animated block-letter MCFinder wordmark.
+- Release archives now contain only an executable. Examples, screenshots and documentation remain in the repository.
 
-Accuracy: results are structure/biome candidates. Height and spawn are approximate; no complete block generation, loot or structure footprint validation. Version profiles 1.21.5–26.3 are experimental. Checkpoints are at least once; deduplicate by `seed_bits`.
+### Run
 
-Русский README: https://github.com/D1ma-coder/MCFinder/blob/main/README.ru.md
-Руководство: https://github.com/D1ma-coder/MCFinder/blob/main/docs/GUIDE.ru.md
+```sh
+./mcfinder search --version 1.18.2 --spawn-near village:128 --radius 1024 --cores 4 --count 1000000 --max-results 3 --ui tui
+```
 
-Windows compatibility: static Cubiomes noise constants are expressed as equivalent decimal double literals, retaining /fp:strict.
+On Windows use `.\mcfinder.exe`.
+
+[README](https://github.com/D1ma-coder/MCFinder) · [Русский README](https://github.com/D1ma-coder/MCFinder/blob/main/README.ru.md) · [Documentation](https://github.com/D1ma-coder/MCFinder/blob/main/docs/GUIDE.md) · [Руководство](https://github.com/D1ma-coder/MCFinder/blob/main/docs/GUIDE.ru.md)
+
+Structure positions and biome validity are checked. Height and spawn are estimates, not full block generation. Profiles from 1.21.5 to 26.3 are experimental.

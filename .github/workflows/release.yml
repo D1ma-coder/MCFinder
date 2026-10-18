@@ -3,6 +3,9 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -32,7 +35,6 @@ jobs:
           path: |
             dist/*.zip
             dist/*.tar.gz
-            dist/*.sha256
           if-no-files-found: error
   publish:
     needs: build
@@ -55,4 +57,8 @@ jobs:
           if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "$tag" ]]; then
             echo 'Tag and Cargo version differ'; exit 1
           fi
-          gh release create "$tag" release-assets/* --target "$GITHUB_SHA" --title "MCFinder $tag — scriptable seed search engine" --notes-file docs/RELEASE_NOTES.md --latest
+          cp docs/RELEASE_NOTES.md release-notes.md
+          printf '\n### SHA-256\n\n```text\n' >> release-notes.md
+          sha256sum release-assets/* | sed 's@release-assets/@@' >> release-notes.md
+          printf '```\n' >> release-notes.md
+          gh release create "$tag" release-assets/* --target "$GITHUB_SHA" --title "MCFinder $tag — scriptable seed search engine" --notes-file release-notes.md --latest

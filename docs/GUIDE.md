@@ -21,7 +21,7 @@ Choose your path: **[TUI](#tui)** · **[CLI](#cli)** · **[Scripts](#script-api)
 
 ## Install and build
 
-Download a matching [release](https://github.com/D1ma-coder/MCFinder/releases/latest), extract it and keep its examples/docs folder alongside the binary. Windows uses `mcfinder.exe`; macOS/Linux use `./mcfinder`. Published binaries are unsigned; macOS binaries are not notarized.
+Download a matching [release](https://github.com/D1ma-coder/MCFinder/releases/latest), extract the executable. Examples and documentation stay in this repository; save a script locally before running it. Windows uses `mcfinder.exe`; macOS/Linux use `./mcfinder`. Published binaries are unsigned; macOS binaries are not notarized.
 
 | Target | Archive |
 |---|---|
@@ -29,7 +29,7 @@ Download a matching [release](https://github.com/D1ma-coder/MCFinder/releases/la
 | macOS Apple Silicon | `aarch64-apple-darwin.tar.gz` |
 | macOS Intel | `x86_64-apple-darwin.tar.gz` |
 
-Compare the SHA-256 file with `shasum -a 256 ARCHIVE` (macOS) or `Get-FileHash ARCHIVE -Algorithm SHA256` (PowerShell). Build requirements are stable Rust and a C compiler. Bundled Cubiomes needs no separate checkout; the first Cargo build downloads pinned Rust dependencies.
+Compare the SHA-256 in the release description with `shasum -a 256 ARCHIVE` (macOS) or `Get-FileHash ARCHIVE -Algorithm SHA256` (PowerShell). Build requirements are stable Rust and a C compiler. Bundled Cubiomes needs no separate checkout; the first Cargo build downloads pinned Rust dependencies.
 
 ```sh
 cargo build --release --locked                    # native C CPU tuning
@@ -43,8 +43,10 @@ Use `cargo run --release -- --help` or `target/release/mcfinder`. Native binarie
 
 ## TUI
 
+Save [high-mansion.rhai](../examples/scripts/high-mansion.rhai) beside the executable before running this example. Release archives contain only the binary. `mcfinder licenses` prints embedded license notices.
+
 ```sh
-./mcfinder search --script examples/scripts/high-mansion.rhai \
+./mcfinder search --script high-mansion.rhai \
   --experimental --cores 8 --count 1000000000 --max-results 3 --ui tui \
   --output high.jsonl --checkpoint high.checkpoint.json
 ```

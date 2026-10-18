@@ -21,9 +21,9 @@
 
 ## Установка и сборка
 
-В [Releases](https://github.com/D1ma-coder/MCFinder/releases/latest) выберите Windows x64 (`x86_64-pc-windows-msvc.zip`), macOS Apple Silicon (`aarch64-apple-darwin.tar.gz`) или macOS Intel (`x86_64-apple-darwin.tar.gz`). Распакуйте архив и откройте терминал в его папке. Сохраните папки examples/docs. В Windows вместо `./mcfinder` используется `.\mcfinder.exe`, команды PowerShell вводятся одной строкой.
+В [Releases](https://github.com/D1ma-coder/MCFinder/releases/latest) выберите Windows x64 (`x86_64-pc-windows-msvc.zip`), macOS Apple Silicon (`aarch64-apple-darwin.tar.gz`) или macOS Intel (`x86_64-apple-darwin.tar.gz`). Распакуйте архив и откройте терминал в его папке. В архиве только исполняемый файл; примеры и документация остаются в репозитории. В Windows вместо `./mcfinder` используется `.\mcfinder.exe`, команды PowerShell вводятся одной строкой.
 
-Проверьте SHA-256: `shasum -a 256 АРХИВ` на macOS, `Get-FileHash АРХИВ -Algorithm SHA256` в PowerShell. Бинарники без подписи, macOS-сборки не нотарифицированы. Для сборки нужны stable Rust и C-компилятор; Rust-зависимости скачиваются при первой сборке, Cubiomes уже включён в исходники.
+Сравните SHA-256 из описания релиза: `shasum -a 256 АРХИВ` на macOS, `Get-FileHash АРХИВ -Algorithm SHA256` в PowerShell. Бинарники без подписи, macOS-сборки не нотарифицированы. Для сборки нужны stable Rust и C-компилятор; Rust-зависимости скачиваются при первой сборке, Cubiomes уже включён в исходники.
 
 ```sh
 cargo build --release --locked
@@ -37,8 +37,10 @@ cargo clippy --locked --all-targets -- -D warnings
 
 ## TUI
 
+Сохраните [high-mansion.rhai](../examples/scripts/high-mansion.rhai) рядом с программой перед запуском примера. Команда `mcfinder licenses` выводит встроенные тексты лицензий.
+
 ```sh
-./mcfinder search --script examples/scripts/high-mansion.rhai \
+./mcfinder search --script high-mansion.rhai \
   --experimental --cores 8 --count 1000000000 --max-results 3 --ui tui \
   --output high.jsonl --checkpoint high.checkpoint.json
 ```

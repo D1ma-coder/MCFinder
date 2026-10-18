@@ -47,6 +47,8 @@ enum Command {
     Versions,
     /// List CPU/GPU devices and automatically selected profiles.
     Devices,
+    /// Print embedded project and dependency license notices.
+    Licenses,
     /// Write a ready-to-edit JSON query to stdout.
     Preset {
         #[arg(value_parser = ["mansion-village", "spawn-pyramid"])]
@@ -187,6 +189,7 @@ fn main() {
 }
 fn execute() -> Result<()> {
     match Cli::parse().command {
+        Command::Licenses => print!("{}", include_str!("../licenses/THIRD_PARTY.txt")),
         Command::Serve => mcfinder::protocol::serve()?,
         Command::CheckScript { path } => {
             let spec = script::ScriptSpec::load(&path)?;

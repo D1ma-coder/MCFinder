@@ -2,6 +2,8 @@
 
 ## 0.4.1 — 2026-10-18
 
+- Binary-only release archives; license notices embedded in the `licenses` command.
+
 - Original animated block-letter SVG wordmark with reduced-motion support.
 
 - Preserve strict floating-point compilation on MSVC by using equivalent static double literals in vendored noise tables.

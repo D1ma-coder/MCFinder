@@ -45,11 +45,11 @@ Archives are published to [Releases](https://github.com/D1ma-coder/MCFinder/rele
 | macOS Apple Silicon | `aarch64-apple-darwin.tar.gz` |
 | macOS Intel | `x86_64-apple-darwin.tar.gz` |
 
-Extract an archive and open a terminal in its folder. It contains the executable, examples and documentation. If a build is not available yet, [build from source](#building-from-source).
+Extract an archive and open a terminal in its folder. The archive contains only the executable; examples and documentation are available in this repository. If a build is not available yet, [build from source](#building-from-source).
 
 Commands below use macOS/Linux syntax. On Windows, replace `./mcfinder` with `.\mcfinder.exe` and enter commands on one line in PowerShell.
 
-Binaries are unsigned; macOS binaries are not notarized. SHA-256 checksums accompany the archives. CPU-only searches do not need OpenCL.
+Binaries are unsigned; macOS binaries are not notarized. SHA-256 checksums are listed in the release description. CPU-only searches do not need OpenCL.
 
 ## First search
 
@@ -112,10 +112,10 @@ fn matches(world, candidate) {
 
 `configure()` defines the search settings. `matches()` accepts or rejects a seed; returned metadata is included in the result. Here, `high_mansion()` scans an 8×8 region grid and returns the first suitable mansion for each seed.
 
-The file is included as `examples/scripts/high-mansion.rhai`:
+Save this script as `high-mansion.rhai` beside the executable and run it. It is also available in the [examples](examples/scripts/high-mansion.rhai):
 
 ```sh
-./mcfinder search --script examples/scripts/high-mansion.rhai \
+./mcfinder search --script high-mansion.rhai \
   --experimental --cores 4 --count 100000000 --max-results 3 --ui tui
 ```
 
@@ -180,4 +180,4 @@ Default builds tune C for the build host. On macOS/Linux, `./scripts/build-nativ
 
 ## License
 
-[MIT](LICENSE). Search uses [Cubiomes](https://github.com/Cubitect/cubiomes) and [community version patches](vendor/README.md). Release archives include dependency notices. MCFinder is not affiliated with Mojang or Microsoft.
+[MIT](LICENSE). Search uses [Cubiomes](https://github.com/Cubitect/cubiomes) and [community version patches](vendor/README.md). Dependency notices are embedded in the executable and printed by `mcfinder licenses`. MCFinder is not affiliated with Mojang or Microsoft.

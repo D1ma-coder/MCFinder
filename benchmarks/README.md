@@ -49,7 +49,7 @@ The TUI reports ~5.8 million tested seeds in 2m08s and a final interval around 4
 
 ### What is not measured
 
-No physical NVIDIA/AMD throughput or Windows/Intel-macOS benchmark is available. Windows/macOS CI smoke tests validate those build paths but do not establish performance. NVIDIA arithmetic is cross-checked against CPU geometry on Apple OpenCL; that is correctness coverage, not NVIDIA hardware testing. Distributed release binaries are portable and may perform differently from these native C measurements.
+No physical NVIDIA/AMD throughput or Windows/Intel-macOS benchmark is available. Windows/macOS CI checks those build paths but does not establish performance. NVIDIA arithmetic is cross-checked against CPU geometry on Apple OpenCL; that is correctness coverage, not NVIDIA hardware testing. Distributed release binaries are portable and may perform differently from these native C measurements.
 
 ## По-русски
 
