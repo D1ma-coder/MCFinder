@@ -1,0 +1,220 @@
+# Руководство MCFinder
+
+**[English](GUIDE.md) · [Русский](GUIDE.ru.md) · [Главная](../README.ru.md)**
+
+Быстрый переход: **[TUI](#tui)** · **[CLI](#cli)** · **[Скрипты](#скрипты-и-api)** · **[Backend](#интеграция-backend)** · **[Rust SDK](#rust-sdk)** · **[Восстановление](#восстановление-и-шардинг)** · **[Точность](#производительность-и-точность)** · **[Проблемы](#решение-проблем)**
+
+<details>
+<summary>Полное оглавление</summary>
+
+- [Установка и сборка](#установка-и-сборка)
+- [TUI](#tui)
+- [CLI](#cli)
+- [Скрипты и API](#скрипты-и-api)
+- [Интеграция backend](#интеграция-backend)
+- [Rust SDK](#rust-sdk)
+- [Восстановление и шардинг](#восстановление-и-шардинг)
+- [Производительность и точность](#производительность-и-точность)
+- [Решение проблем](#решение-проблем)
+
+</details>
+
+## Установка и сборка
+
+В [Releases](https://github.com/D1ma-coder/MCFinder/releases/latest) выберите Windows x64 (`x86_64-pc-windows-msvc.zip`), macOS Apple Silicon (`aarch64-apple-darwin.tar.gz`) или macOS Intel (`x86_64-apple-darwin.tar.gz`). Распакуйте архив и откройте терминал в его папке. Сохраните папки examples/docs. В Windows вместо `./mcfinder` используется `.\mcfinder.exe`, команды PowerShell вводятся одной строкой.
+
+Проверьте SHA-256: `shasum -a 256 АРХИВ` на macOS, `Get-FileHash АРХИВ -Algorithm SHA256` в PowerShell. Бинарники без подписи, macOS-сборки не нотарифицированы. Для сборки нужны stable Rust и C-компилятор; Rust-зависимости скачиваются при первой сборке, Cubiomes уже включён в исходники.
+
+```sh
+cargo build --release --locked
+cargo build --release --locked --no-default-features
+./scripts/build-native.sh
+cargo test --locked
+cargo clippy --locked --all-targets -- -D warnings
+```
+
+Обычная сборка настраивает C под текущий CPU, `--no-default-features` даёт переносимую сборку, скрипт build-native на macOS/Linux настраивает и C, и Rust. Нативный бинарник не следует распространять как универсальный.
+
+## TUI
+
+```sh
+./mcfinder search --script examples/scripts/high-mansion.rhai \
+  --experimental --cores 8 --count 1000000000 --max-results 3 --ui tui \
+  --output high.jsonl --checkpoint high.checkpoint.json
+```
+
+| Элемент | Значение |
+|---|---|
+| Results | Выданные результаты; Matched включает опережающую работу пула |
+| Speed | Основы/с и полные миры/с за последний отчётный интервал |
+| Tested | Выполненная работа; K/M/B/T сокращают только отображение |
+| Committed | Точное число завершённых основ, размер диапазона и время |
+| График | История скорости на доступную ширину |
+| Locations | Координаты `{x,z}` / `{x,y,z}` из data скрипта; иначе нативное evidence |
+| Details | Метаданные; `base Y≈…` означает оценку, а не точный Y |
+| Space | Пауза/продолжение |
+| ↑ / ↓ | Просмотр последних 200 результатов |
+| q / Esc / Ctrl+C | Остановка, запись результата/checkpoint и восстановление терминала |
+| Enter / q после завершения | Закрыть экран |
+
+Минимальный размер терминала 44×14. При узком окне текст может обрезаться, полный JSONL сохраняет все данные. После нормального завершения экран остаётся открытым. Уже запущенный бинарник не подхватывает обновления интерфейса автоматически.
+
+## CLI
+
+```sh
+./mcfinder devices
+./mcfinder versions
+./mcfinder search --help
+./mcfinder search --version 1.18.2 --near mansion:village:10 \
+  --radius 4096 --cores 8 --count 1000000 --max-results 3 --ui tui
+```
+
+Режимы: `cpu-only` по умолчанию или `cpu-and-gpu` для OpenCL-отсева позиций плюс CPU-проверки. `--cores N` задаёт число рабочих потоков, не привязку к физическим ядрам; без него используются доступные логические CPU. `--gpu-index N` выбирает карту в гибридном режиме, профиль Apple/NVIDIA/Generic определяется автоматически.
+
+Точные названия профилей от 1.8.9 до 26.3 перечисляет `versions`. Неподдерживаемые патчи не подменяются соседними. С 1.21.5 нужен `--experimental`. Только скрипт без нативных правил требует CPU-only.
+
+**Правила:** `--near СТРУКТУРА:СТРУКТУРА:РАССТОЯНИЕ`, `--spawn-near СТРУКТУРА:РАССТОЯНИЕ`. Они объединяются через AND. Дистанции считаются между начальными позициями X/Z, обе позиции пары должны быть внутри квадрата radius. Пара одного типа требует разных структур. Разные правила могут выбрать разные экземпляры; для общей деревни связывайте условия скриптом.
+
+Названия: `desert_pyramid`, `jungle_temple`, `swamp_hut`, `igloo`, `village`, `ocean_ruin`, `shipwreck`, `monument`, `mansion`, `outpost`, `ruined_portal`, `ancient_city`, `trail_ruins`, `trial_chambers`. Доступность зависит от версии. Встроенный поиск — стандартный Overworld.
+
+JSON-конфиг: `{"version":"1.18.2","radius":4096,"rules":[{"type":"near","a":"mansion","b":"village","distance":10}]}`. Используйте `--config FILE` или `--script FILE`. CLI version/radius переопределяют настройки; повторные near/spawn-near добавляют правила. Неизвестные поля отклоняются.
+
+| Флаг | Поведение |
+|---|---|
+| `--start` | Начальный сид: signed i64 или unsigned u64; по умолчанию 0 |
+| `--count` | Положительное количество сидов или 48-битных основ |
+| `--structure-seeds` | Геометрия основы переиспользуется для верхних 16 бит |
+| `--upper-start`, `--upper-count` | Только для structure-seeds; обычно 65536 вариантов, для placement-only — 1 |
+| `--placement-only` | Пропустить биомы; несовместимо с правилами спавна |
+| `--max-results N` | Лимит выдачи текущего запуска; без флага не ограничено |
+| `--output FILE` | Новый JSONL; существующий требует `--append` |
+| `--checkpoint FILE` | Новый файл прогресса |
+| `--batch-size N` | Необязательная замена автоматического размера пакета |
+| `--ui auto/tui/plain/backend` | Выбор интерфейса |
+
+Plain: результаты stdout, статистика stderr. Backend: только JSONL stdout. Auto выбирает TUI для терминала. Основы/с и миры/с — разные показатели при раскрытии старших битов.
+
+## Скрипты и API
+
+```rust
+fn configure() { #{version: "26.2", radius: 5120, rules: []} }
+fn matches(world, candidate) {
+    let result = world.high_mansion(170.0, 4);
+    if result == () { return false; }
+    result
+}
+```
+
+`configure()` выполняется один раз, `matches()` — после нативных правил. Возвращайте false/true или map для принятия с метаданными `hit.data`. Candidate содержит сид, evidence, спавн и валидацию. Зарезервированный ключ спавна читайте как `candidate["spawn"]`; метод для расчёта — `world.spawn_estimate()`.
+
+| API | Описание |
+|---|---|
+| `world.seed` | Знаковый i64 |
+| `world.seed_bits()` | Беззнаковая десятичная строка |
+| `world.lower48()`, `world.upper16()` | Части сида |
+| `world.position(name,rx,rz)` | `{x,z}` или `()`; rx/rz — регионы, без биомов |
+| `world.viable(name,x,z)` | Допустимость биома |
+| `world.structures(name,x,z,radius,biomes)` | Позиции в круге, блоковые координаты, radius 0..100000 |
+| `world.biome(x,y,z)` | ID Cubiomes, y −64..320 |
+| `world.spawn_estimate()` | Приблизительный X/Z спавна |
+| `world.slime_chunk(cx,cz)` | Slime chunk, координаты чанка |
+| `world.mansion_base_y_estimate(x,z)` | 1.18+: минимум оценки высоты четырёх точек размещения с поворотом |
+| `world.high_mansion(min_y,regions)` | 1.18+: нативная сетка `[-regions,regions)`, regions 1..16; map или `()` |
+| `distance2(x,z,a,b)` | Квадрат расстояния без округления |
+
+`high_mansion(170.0,4)` проверяет 64 региона; низкие позиции отбрасываются до биомов, возвращается первый подходящий особняк на сид. Высота — климатическая оценка, не фактический блок. Сетка этого метода задаётся явно, независимо от Query.radius.
+
+Лимиты: исходник до 1 MiB; обычно 100000 Rhai-операций на вызов, максимум 10000000 через ScriptSpec; стек 32; массив до 4096; нативных проб до 100000 на сид. import/eval отключены, вывод скрипта подавлен. Нативные расширения — доверенный код, не песочница безопасности. `mcfinder check-script FILE` проверяет компиляцию без поиска.
+
+[Полная справка API](ENGINE.md) · [Примеры](../examples/scripts).
+
+## Интеграция backend
+
+Запустите `mcfinder serve`. Отправляйте JSON-команды по одной на строку stdin с уникальными id и постоянно читайте stdout. Один процесс — одна активная задача. Не ждите завершения, прежде чем начать чтение событий.
+
+| Команда | Параметры / результат |
+|---|---|
+| `capabilities` | Версии, режимы, протокол, расширения |
+| `compile` | `script:{source,name?,max_operations?}` → Query и SHA-256 |
+| `start` | `settings`, опционально max_results/checkpoint/append |
+| `status` | Немедленный снимок состояния |
+| `pause`, `resume`, `cancel` | Управление активной задачей |
+| `restore` | checkpoint и необязательные cores/mode/gpu_index/max_results |
+| `shutdown` | Завершение с отменой/записью активной работы |
+
+```json
+{"cmd":"start","id":"job-1","max_results":3,"settings":{"query":{"version":"1.18.2","radius":4096,"rules":[{"type":"near","a":"mansion","b":"village","distance":10}]},"mode":"cpu-only","cores":4,"count":"1000000"}}
+{"cmd":"status","id":"status-1"}
+{"cmd":"pause","id":"pause-1"}
+{"cmd":"resume","id":"resume-1"}
+{"cmd":"cancel","id":"cancel-1"}
+```
+
+Вместо query можно передать `settings.script:{source,name?,max_operations?}`. Если есть оба, явная query заменяет configure, а matches сохраняется. Остальные settings соответствуют CLI: режим, диапазон, experimental, шардинг. Для точных 64 бит передавайте сиды/count строками; скорости — JSON-числа.
+
+События имеют protocol:1, возрастающий seq, job_id от запуска: started/ready/progress/match/error/finished. Ready сообщает профили, хеш скрипта и порядок правил. Итоговые статусы: complete/limit_reached/cancelled/failed. Ошибка скрипта не мешает следующему запуску backend.
+
+Счётчики: bases_tested, seeds_evaluated, geometry_passed, scripts_evaluated, matches_found, results_emitted, bases_committed, completed_before_run, cursor, total_bases; скорости bases_per_second/seeds_per_second/average_bases_per_second; elapsed_seconds/phase/paused/cancelled. [Подробные значения](ENGINE.md#jsonl-protocol-v1).
+
+Отдельный поток публикует progress раз в секунду даже во время паузы или долгой проверки. Заблокированный stdout создаёт обратное давление. EOF отменяет поиск и сохраняет префикс. Для разового потока без управления используйте `search --ui backend`.
+
+```sh
+python3 examples/backend_client.py --engine ./mcfinder --cores 4
+```
+
+[Python-клиент](../examples/backend_client.py) использует только стандартную библиотеку; умеет запуск, чтение событий и shutdown. [Пример Node.js](GUIDE.md#backend-integration) показывает subprocess; используйте BigInt(seed_bits), не Number. HTTP/WebSocket-обёртка может пересылать команды/события и хранить результаты. Встроенного сетевого listener нет. Аутентификацию, лимиты и изоляцию недоверенных скриптов обеспечивает ваше приложение.
+
+## Rust SDK
+
+```toml
+[dependencies]
+mcfinder = { git = "https://github.com/D1ma-coder/MCFinder", tag = "v0.4.0" }
+```
+
+`engine::run(Settings,RunOptions,Control,Observer)` не ставит глобальные обработчики сигналов и не пишет в stdout/stderr. Создавайте новый Control на запуск и быстрый потокобезопасный Observer. pause/resume/cancel/snapshot доступны из другого потока.
+
+- [Нативный фильтр](../examples/sdk.rs): `RunOptions.filter: Arc<dyn SeedFilter>`, None отклоняет, Some(JSON) принимает.
+- [Расширение Rhai и хост](../examples/sdk_script.rs): ScriptExtension регистрирует методы, RunOptions.extensions подключает их, protocol::serve_with_extensions создаёт собственный backend.
+- World предоставляет seed_u64/version_id/is_cancelled/consume_probes. Длинные нативные циклы должны проверять отмену.
+- Checkpoint сохраняет имена провайдеров; восстановление требует того же хоста. Используйте версионированные имена: имя не является хешем кода.
+
+`cargo run --release --example sdk` или `cargo run --release --example sdk_script -- serve`.
+
+## Восстановление и шардинг
+
+```sh
+./mcfinder resume high.checkpoint.json --mode cpu-only --cores 8 --ui tui
+```
+
+Схема 3 сохраняет Query, **текст** скрипта, параметры и требования провайдеров. Изменение файла не меняет восстановленную задачу. Несовместимая версия движка отклоняется. Новый поиск требует новых файлов; append разрешает осознанное добавление. Restore добавляет автоматически и отказывает, если исходный output исчез.
+
+Курсор продвигается после сброса результатов. Последняя незавершённая основа может повториться: гарантия at least once, уникальность по seed_bits. Это не транзакция при внезапном отключении питания. Не разделяйте файлы между процессами. max-results относится к текущему запуску; при restore задайте новый лимит при необходимости.
+
+`--shards N --shard-id K` делит один диапазон по смещениям `K + i*N`, K от 0 до N−1. На всех процессах запрос/диапазон одинаковые, файлы разные. В structure-seed режиме count считает основы, не раскрытые полные миры.
+
+## Производительность и точность
+
+План компилируется один раз, дешёвые проверки идут до спавна, редкая структура — первой, вторая ищется в соседних регионах. Геометрия младших 48 бит переиспользуется. Движок управляет потоками CPU и адаптивными пакетами. GPU специализирует целочисленное размещение; Metal/CUDA нет. NVIDIA-арифметика сверенa на Apple GPU, физическая NVIDIA в этих измерениях не использовалась.
+
+Сначала дешёвые условия, затем дорогие запросы мира. Переиспользуйте evidence, используйте нативные bulk-методы вместо больших Rhai-циклов. [Бенчмарки](../benchmarks/README.md) содержат команды и исходные измерения.
+
+Оставшиеся затраты: полная инициализация шумов биомов, отдельные кеши нативного плана/скрипта, преобразование candidate и опережающий пакет. Движок не превращает произвольный AST в идеальный нативный план. После достижения лимита часть параллельной работы может быть отброшена.
+
+Встроенная точность: начальные позиции структур, биомы, оценки спавна и высоты. **Нет** полной генерации блоков, сундуков, пересечения границ построек, определения крыши, точного вертикального размещения и поиска структур Nether/End. Современные профили экспериментальные; проверяйте настройки и версию в игре.
+
+## Решение проблем
+
+| Симптом | Решение |
+|---|---|
+| Нет GPU / loader error | CPU-only или драйвер OpenCL; проверьте devices |
+| GPU медленнее | Дешёвая геометрия или маленькие пакеты; сравните время целиком |
+| Пустое evidence у скрипта | Координаты лежат в data, актуальный TUI извлекает их |
+| Y отличается от игры | Это климатическая оценка, не вычисление поверхности |
+| Нет результатов | Проверьте условия, radius, версию и смысл начальных позиций |
+| Нельзя перезаписать файл | Новый путь, resume или явный append |
+| Превышен бюджет скрипта | check-script, проверка границ, уменьшение области |
+| Отмена не мгновенная | Нативный вызов сначала завершается |
+| Backend завис | Постоянно читайте stdout; обработайте error/finished |
+| ОС предупреждает о бинарнике | Нет подписи; проверьте SHA-256/происхождение или соберите исходники |
+
+[Наверх](#руководство-mcfinder) · [Engine API](ENGINE.md) · [Главная](../README.ru.md)

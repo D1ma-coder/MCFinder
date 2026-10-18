@@ -1,0 +1,31 @@
+[package]
+name = "mcfinder"
+version = "0.4.0"
+edition = "2024"
+description = "Scriptable CPU/GPU Minecraft seed search engine with TUI and JSONL backend"
+exclude = ["dist/**", "target/**", "*.jsonl"]
+license = "MIT"
+
+[features]
+default = ["native-cpu"]
+native-cpu = []
+
+[dependencies]
+clap = { version = "4.6.6", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.152"
+rayon = "1.12.0"
+ctrlc = "3.4.5"
+libloading = "0.7.4"
+rhai = { version = "1.26.1", features = ["sync", "serde"] }
+ratatui = { version = "0.30.2", default-features = false, features = ["std", "crossterm", "crossterm_0_29", "layout-cache"] }
+crossterm = "0.29"
+sha2 = "0.10.9"
+
+[build-dependencies]
+cc = "1.5.1"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "unwind"

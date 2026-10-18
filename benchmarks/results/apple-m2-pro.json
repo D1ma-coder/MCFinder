@@ -1,0 +1,365 @@
+{
+  "schema": 1,
+  "timestamp_utc": "2026-10-18T17:33:26.999335+00:00",
+  "system": "Darwin",
+  "machine": "arm64",
+  "engine": "mcfinder 0.4.0",
+  "devices": "cpu: 12 logical cores; architecture=aarch64; tuning=native Apple Silicon\ngpu:0 Apple M2 Pro (Apple) | automatic profile=Apple",
+  "method": "sequential fixed ranges; engine-reported elapsed time; GPU setup included; no result limit; 1 warmup then repeated runs",
+  "cases": [
+    {
+      "name": "geometry_cpu",
+      "arguments": [
+        "--version",
+        "1.18.2",
+        "--near",
+        "mansion:village:10",
+        "--radius",
+        "4096",
+        "--count",
+        "1000000",
+        "--placement-only",
+        "--cores",
+        "4"
+      ],
+      "median_bases_per_second": 1621484.8901273813,
+      "min_bases_per_second": 1209096.0304040061,
+      "max_bases_per_second": 1923005.7348838528,
+      "result_sha256": "1d0c6e0199dc29f3854fb082af812007643b07b791b91ac7a5ac905301ccaf6a",
+      "runs": [
+        {
+          "elapsed_seconds": 0.616718667,
+          "average_bases_per_second": 1621484.8901273813,
+          "bases_tested": "1000000",
+          "seeds_evaluated": "32564",
+          "geometry_passed": "32564",
+          "results_emitted": "32564"
+        },
+        {
+          "elapsed_seconds": 0.52001925,
+          "average_bases_per_second": 1923005.7348838528,
+          "bases_tested": "1000000",
+          "seeds_evaluated": "32564",
+          "geometry_passed": "32564",
+          "results_emitted": "32564"
+        },
+        {
+          "elapsed_seconds": 0.827064166,
+          "average_bases_per_second": 1209096.0304040061,
+          "bases_tested": "1000000",
+          "seeds_evaluated": "32564",
+          "geometry_passed": "32564",
+          "results_emitted": "32564"
+        }
+      ]
+    },
+    {
+      "name": "geometry_gpu",
+      "arguments": [
+        "--version",
+        "1.18.2",
+        "--near",
+        "mansion:village:10",
+        "--radius",
+        "4096",
+        "--count",
+        "1000000",
+        "--placement-only",
+        "--cores",
+        "4",
+        "--mode",
+        "cpu-and-gpu"
+      ],
+      "median_bases_per_second": 1760273.6169310156,
+      "min_bases_per_second": 1624090.5667348322,
+      "max_bases_per_second": 1797080.2825866335,
+      "result_sha256": "1d0c6e0199dc29f3854fb082af812007643b07b791b91ac7a5ac905301ccaf6a",
+      "runs": [
+        {
+          "elapsed_seconds": 0.615729209,
+          "average_bases_per_second": 1624090.5667348322,
+          "bases_tested": "1000000",
+          "seeds_evaluated": "32564",
+          "geometry_passed": "32564",
+          "results_emitted": "32564"
+        },
+        {
+          "elapsed_seconds": 0.5680935,
+          "average_bases_per_second": 1760273.6169310156,
+          "bases_tested": "1000000",
+          "seeds_evaluated": "32564",
+          "geometry_passed": "32564",
+          "results_emitted": "32564"
+        },
+        {
+          "elapsed_seconds": 0.556458167,
+          "average_bases_per_second": 1797080.2825866335,
+          "bases_tested": "1000000",
+          "seeds_evaluated": "32564",
+          "geometry_passed": "32564",
+          "results_emitted": "32564"
+        }
+      ]
+    },
+    {
+      "name": "biomes_cpu",
+      "arguments": [
+        "--version",
+        "1.18.2",
+        "--near",
+        "village:desert_pyramid:128",
+        "--radius",
+        "1024",
+        "--count",
+        "100000",
+        "--cores",
+        "10"
+      ],
+      "median_bases_per_second": 90372.59261635656,
+      "min_bases_per_second": 82075.4837965041,
+      "max_bases_per_second": 95626.69251774922,
+      "result_sha256": "cf94c8c157fe696fd9b1d8deee0182cd140568cf8b63bc99b294c8ece79d4a41",
+      "runs": [
+        {
+          "elapsed_seconds": 1.218390625,
+          "average_bases_per_second": 82075.4837965041,
+          "bases_tested": "100000",
+          "seeds_evaluated": "98094",
+          "geometry_passed": "98094",
+          "results_emitted": "4689"
+        },
+        {
+          "elapsed_seconds": 1.106530167,
+          "average_bases_per_second": 90372.59261635656,
+          "bases_tested": "100000",
+          "seeds_evaluated": "98094",
+          "geometry_passed": "98094",
+          "results_emitted": "4689"
+        },
+        {
+          "elapsed_seconds": 1.045733125,
+          "average_bases_per_second": 95626.69251774922,
+          "bases_tested": "100000",
+          "seeds_evaluated": "98094",
+          "geometry_passed": "98094",
+          "results_emitted": "4689"
+        }
+      ]
+    },
+    {
+      "name": "upper16_cpu",
+      "arguments": [
+        "--version",
+        "1.18.2",
+        "--near",
+        "mansion:village:10",
+        "--radius",
+        "4096",
+        "--count",
+        "10000",
+        "--structure-seeds",
+        "--upper-count",
+        "256",
+        "--cores",
+        "10"
+      ],
+      "median_bases_per_second": 22513.20960885309,
+      "min_bases_per_second": 21787.66919367026,
+      "max_bases_per_second": 23553.660507590146,
+      "result_sha256": "bdcdb83e7f3c16c066312a516ba9d4bfa77e67a548268fd7cdc7374af9c282cc",
+      "runs": [
+        {
+          "elapsed_seconds": 0.424562458,
+          "average_bases_per_second": 23553.660507590146,
+          "bases_tested": "10000",
+          "seeds_evaluated": "77312",
+          "geometry_passed": "302",
+          "results_emitted": "1"
+        },
+        {
+          "elapsed_seconds": 0.458975208,
+          "average_bases_per_second": 21787.66919367026,
+          "bases_tested": "10000",
+          "seeds_evaluated": "77312",
+          "geometry_passed": "302",
+          "results_emitted": "1"
+        },
+        {
+          "elapsed_seconds": 0.444183667,
+          "average_bases_per_second": 22513.20960885309,
+          "bases_tested": "10000",
+          "seeds_evaluated": "77312",
+          "geometry_passed": "302",
+          "results_emitted": "1"
+        }
+      ]
+    },
+    {
+      "name": "height_script_150",
+      "arguments": [
+        "--script",
+        "examples/benchmarks/high-mansion-script.rhai",
+        "--experimental",
+        "--count",
+        "100000",
+        "--cores",
+        "10"
+      ],
+      "median_bases_per_second": 15294.981985204668,
+      "min_bases_per_second": 15187.905045233452,
+      "max_bases_per_second": 15419.947722886143,
+      "result_sha256": "50debfcce2dce0596f4c1e4f29aaaa0d1c973095fa7e5c0fc46cdbf7141a3dbe",
+      "runs": [
+        {
+          "elapsed_seconds": 6.538092042,
+          "average_bases_per_second": 15294.981985204668,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "5"
+        },
+        {
+          "elapsed_seconds": 6.485106292,
+          "average_bases_per_second": 15419.947722886143,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "5"
+        },
+        {
+          "elapsed_seconds": 6.584186542,
+          "average_bases_per_second": 15187.905045233452,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "5"
+        }
+      ]
+    },
+    {
+      "name": "height_native_150",
+      "arguments": [
+        "--script",
+        "examples/benchmarks/high-mansion-native.rhai",
+        "--experimental",
+        "--count",
+        "100000",
+        "--cores",
+        "10"
+      ],
+      "median_bases_per_second": 48265.186309048986,
+      "min_bases_per_second": 47186.48702526945,
+      "max_bases_per_second": 48405.71247914394,
+      "result_sha256": "50debfcce2dce0596f4c1e4f29aaaa0d1c973095fa7e5c0fc46cdbf7141a3dbe",
+      "runs": [
+        {
+          "elapsed_seconds": 2.119250792,
+          "average_bases_per_second": 47186.48702526945,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "5"
+        },
+        {
+          "elapsed_seconds": 2.07188675,
+          "average_bases_per_second": 48265.186309048986,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "5"
+        },
+        {
+          "elapsed_seconds": 2.065871875,
+          "average_bases_per_second": 48405.71247914394,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "5"
+        }
+      ]
+    },
+    {
+      "name": "height_native_170",
+      "arguments": [
+        "--script",
+        "examples/scripts/high-mansion.rhai",
+        "--experimental",
+        "--count",
+        "100000",
+        "--cores",
+        "10"
+      ],
+      "median_bases_per_second": 47644.02670161833,
+      "min_bases_per_second": 43592.815206568914,
+      "max_bases_per_second": 49507.29819485217,
+      "result_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "runs": [
+        {
+          "elapsed_seconds": 2.019904209,
+          "average_bases_per_second": 49507.29819485217,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "0"
+        },
+        {
+          "elapsed_seconds": 2.098899,
+          "average_bases_per_second": 47644.02670161833,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "0"
+        },
+        {
+          "elapsed_seconds": 2.293956,
+          "average_bases_per_second": 43592.815206568914,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "0"
+        }
+      ]
+    },
+    {
+      "name": "slime_2x2",
+      "arguments": [
+        "--script",
+        "examples/scripts/slime-cluster.rhai",
+        "--count",
+        "100000",
+        "--cores",
+        "10"
+      ],
+      "median_bases_per_second": 1364913.6498298745,
+      "min_bases_per_second": 1293499.2980890735,
+      "max_bases_per_second": 1396013.5604290017,
+      "result_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "runs": [
+        {
+          "elapsed_seconds": 0.071632542,
+          "average_bases_per_second": 1396013.5604290017,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "0"
+        },
+        {
+          "elapsed_seconds": 0.073264708,
+          "average_bases_per_second": 1364913.6498298745,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "0"
+        },
+        {
+          "elapsed_seconds": 0.077309667,
+          "average_bases_per_second": 1293499.2980890735,
+          "bases_tested": "100000",
+          "seeds_evaluated": "100000",
+          "geometry_passed": "100000",
+          "results_emitted": "0"
+        }
+      ]
+    }
+  ]
+}

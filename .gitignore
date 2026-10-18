@@ -1,0 +1,11 @@
+/target/
+*.checkpoint.json
+*.checkpoint.tmp
+*.jsonl
+.DS_Store
+
+/dist/
+/runs/
+/.publish/
+__pycache__/
+*.pyc

@@ -1,0 +1,7 @@
+{
+  "version": "1.18.2",
+  "radius": 512,
+  "rules": [
+    {"type": "spawn_near", "structure": "desert_pyramid", "distance": 24}
+  ]
+}

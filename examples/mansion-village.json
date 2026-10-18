@@ -1,0 +1,7 @@
+{
+  "version": "1.18.2",
+  "radius": 4096,
+  "rules": [
+    {"type": "near", "a": "mansion", "b": "village", "distance": 10}
+  ]
+}
