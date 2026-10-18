@@ -87,11 +87,11 @@ int getStructureConfig(int structureType, int mc, StructureConfig *sconf)
     s_trial_chambers        = { 94251327, 34, 22, Trial_Chambers,   0,0},
     s_treasure              = { 10387320,  1,  1, Treasure,         0,0},
     s_mineshaft             = {        0,  1,  1, Mineshaft,        0,0},
-    s_desert_well_115       = {    30010,  1,  1, Desert_Well,      0, 1.f/1000},
-    s_desert_well_117       = {    40013,  1,  1, Desert_Well,      0, 1.f/1000},
-    s_desert_well           = {    40002,  1,  1, Desert_Well,      0, 1.f/1000},
-    s_geode_117             = {    20000,  1,  1, Geode,            0, 1.f/24},
-    s_geode                 = {    20002,  1,  1, Geode,            0, 1.f/24},
+    s_desert_well_115       = {    30010,  1,  1, Desert_Well,      0, 0.0010000000474974513f},
+    s_desert_well_117       = {    40013,  1,  1, Desert_Well,      0, 0.0010000000474974513f},
+    s_desert_well           = {    40002,  1,  1, Desert_Well,      0, 0.0010000000474974513f},
+    s_geode_117             = {    20000,  1,  1, Geode,            0, 0.0416666679084301f},
+    s_geode                 = {    20002,  1,  1, Geode,            0, 0.0416666679084301f},
     // nether and end structures
     s_fortress_115          = {        0, 16,  8, Fortress,         DIM_NETHER,0},
     s_fortress              = { 30084232, 27, 23, Fortress,         DIM_NETHER,0},
@@ -100,10 +100,10 @@ int getStructureConfig(int structureType, int mc, StructureConfig *sconf)
     // for the scattered return gateways
     s_end_gateway_115       = {    30000,  1,  1, End_Gateway,      DIM_END, 700},
     s_end_gateway_116       = {    40013,  1,  1, End_Gateway,      DIM_END, 700},
-    s_end_gateway_117       = {    40013,  1,  1, End_Gateway,      DIM_END, 1.f/700},
-    s_end_gateway           = {    40000,  1,  1, End_Gateway,      DIM_END, 1.f/700},
+    s_end_gateway_117       = {    40013,  1,  1, End_Gateway,      DIM_END, 0.0014285714132711291f},
+    s_end_gateway           = {    40000,  1,  1, End_Gateway,      DIM_END, 0.0014285714132711291f},
     s_end_island_116        = {        0,  1,  1, End_Island,       DIM_END, 14},
-    s_end_island            = {        0,  1,  1, End_Island,       DIM_END, 1.f/14}
+    s_end_island            = {        0,  1,  1, End_Island,       DIM_END, 0.0714285746216774f}
     ;
 
     switch (structureType)
