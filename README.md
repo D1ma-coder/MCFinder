@@ -12,7 +12,7 @@ MCFinder is a Rust tool for finding Minecraft Java Edition seeds that meet speci
 
 Set conditions through command-line options or a script. The tool searches the seed range, shows progress and results in a terminal, and saves checkpoints. You can also run it as a backend for another application.
 
-Named version profiles range from 1.8.9 to 26.3; `versions` prints the full list. Profiles from 1.21.5 require `--experimental`. Current checks cover structure positions and biomes. Height and spawn are approximate; full blocks, loot and structure footprints are not generated.
+Named version profiles range from 1.8.9 to 26.3; `versions` prints the full list. Profiles from 1.21.5 require `--experimental`. Current checks cover structure positions and biomes. Spawn is approximate. Default height filters use estimates; an optional [vanilla 26.2 runtime](docs/EXACT_TERRAIN.md) calculates exact mansion placement Y. Full blocks, loot and structure footprints are not generated.
 
 **[Install](#installation) · [First search](#first-search) · [Custom conditions](#custom-conditions) · [Integration](#using-mcfinder-in-other-applications) · [Benchmarks](#performance) · [Build](#building-from-source)**
 
@@ -20,9 +20,9 @@ Named version profiles range from 1.8.9 to 26.3; `versions` prints the full list
 
 A mansion with a tall stone foundation, found for **Java 26.2** and checked in-game:
 
-- Seed: **4743858**
-- Coordinates: **X=1792, Z=−2416**
-- Estimated base height: **Y≈172.4**. This is the engine's estimate, not a measured block Y.
+- Seed: **1152921504606846976**
+- Coordinates: **X=12695296, Z=−29959088**
+- Exact structure-start height: **Y=216**, calculated with vanilla 26.2. This is the placement height, not the length of the stone foundation.
 
 ![Mansion with a tall foundation](docs/assets/mansion-in-game.webp)
 
@@ -31,7 +31,7 @@ A mansion with a tall stone foundation, found for **Java 26.2** and checked in-g
 
 ![Three high-mansion results on Apple M2 Pro](docs/assets/high-mansion-tui.png)
 
-Apple M2 Pro, 10 CPU threads. The search stopped after three results. The screenshot shows throughput for the last reporting interval; repeated measurements are listed below.
+Apple M2 Pro, 12 CPU threads. Three results found while the full-world search continues. The screenshot shows 100.8K chunk checks/s for the last reporting interval; repeated measurements are listed below.
 
 </details>
 
@@ -120,6 +120,8 @@ Save this script as `high-mansion.rhai` beside the executable and run it. It is 
 ```
 
 The script does not need to create threads or implement the seed loop. The [handbook](docs/GUIDE.md#script-api) explains the API and other examples.
+
+For exact mansion placement height, use [high-mansion-exact.rhai](examples/scripts/high-mansion-exact.rhai) with the prepared vanilla runtime. [Setup and validation](docs/EXACT_TERRAIN.md).
 
 ## Using MCFinder in other applications
 

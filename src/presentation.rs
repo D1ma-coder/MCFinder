@@ -61,12 +61,13 @@ fn plain() -> Observer {
                 );
             }
             Event::Progress { state } => eprintln!(
-                "bases={} seeds={} found={} {:.0} bases/s {:.0} seeds/s phase={} cursor={}",
+                "bases={} seeds={} found={} {:.0} bases/s {:.0} seeds/s {:.0} chunks/s phase={} cursor={}",
                 state.bases_tested,
                 state.seeds_evaluated,
                 state.results_emitted,
                 state.bases_per_second,
                 state.seeds_per_second,
+                state.chunks_per_second,
                 state.phase,
                 state.cursor
             ),
@@ -157,7 +158,8 @@ impl Screen {
                 self.status = "Searching".into();
             }
             Event::Progress { state } => {
-                self.rates.push_back(state.bases_per_second.max(0.0) as u64);
+                self.rates
+                    .push_back(state.chunks_per_second.max(0.0) as u64);
                 if self.rates.len() > 80 {
                     self.rates.pop_front();
                 }
@@ -171,6 +173,11 @@ impl Screen {
             }
             Event::Error { message } => self.error = Some(message),
             Event::Finished { summary } => {
+                self.rates
+                    .push_back(summary.state.chunks_per_second.max(0.0) as u64);
+                if self.rates.len() > 80 {
+                    self.rates.pop_front();
+                }
                 self.status = summary.status;
                 self.state = summary.state;
                 self.error = summary.error;
@@ -262,6 +269,10 @@ fn hit_details(hit: &Hit) -> (String, String, u16) {
                 && value.as_str() == Some("climate_depth_estimate_not_generated_surface")
             {
                 details.push("height: estimate".into());
+            } else if key == "height_validation"
+                && value.as_str() == Some("vanilla_26.2_structure_start")
+            {
+                details.push("height: exact · vanilla 26.2".into());
             } else {
                 let mut coordinates = Vec::new();
                 script_locations(value, key, &mut coordinates);
@@ -284,10 +295,25 @@ fn draw(frame: &mut Frame<'_>, screen: &Screen) {
         );
         return;
     }
+    let slow_seeds: Vec<_> = screen
+        .state
+        .active_seeds
+        .iter()
+        .filter(|s| s.elapsed_seconds >= 1.0)
+        .collect();
+    let visible_seeds = slow_seeds
+        .len()
+        .min(area.height.saturating_sub(17) as usize);
+    let progress_height = if visible_seeds == 0 {
+        0
+    } else {
+        visible_seeds as u16 + 2
+    };
     let layout = Layout::vertical([
         Constraint::Length(3),
         Constraint::Length(4),
         Constraint::Length(3),
+        Constraint::Length(progress_height),
         Constraint::Min(3),
         Constraint::Length(2),
     ])
@@ -326,8 +352,8 @@ fn draw(frame: &mut Frame<'_>, screen: &Screen) {
     );
     frame.render_widget(
         Paragraph::new(format!(
-            "{} bases/s\n{} worlds/s",
-            compact(screen.state.bases_per_second),
+            "{} chunks/s\n{} world starts/s",
+            compact(screen.state.chunks_per_second),
             compact(screen.state.seeds_per_second)
         ))
         .block(Block::bordered().title(" Speed · last second ")),
@@ -339,7 +365,7 @@ fn draw(frame: &mut Frame<'_>, screen: &Screen) {
             compact(screen.state.bases_tested as f64),
             compact(screen.state.seeds_evaluated as f64)
         ))
-        .block(Block::bordered().title(" Tested ")),
+        .block(Block::bordered().title(" Started ")),
         stats[2],
     );
     let completed = screen
@@ -380,11 +406,45 @@ fn draw(frame: &mut Frame<'_>, screen: &Screen) {
         .collect();
     frame.render_widget(
         Sparkline::default()
-            .block(Block::bordered().title(" Bases/s "))
+            .block(Block::bordered().title(format!(
+                " Chunks/s · {} ",
+                compact(screen.state.chunks_per_second)
+            )))
             .data(&rates)
             .style(Style::default().fg(Color::Cyan)),
         middle[1],
     );
+    if visible_seeds > 0 {
+        let block = Block::bordered().title(format!(
+            " Seed progress · {}/{} active · regions ",
+            visible_seeds,
+            slow_seeds.len()
+        ));
+        let inner = block.inner(layout[3]);
+        frame.render_widget(block, layout[3]);
+        for (i, seed) in slow_seeds.iter().take(visible_seeds).enumerate() {
+            let ratio =
+                (seed.regions_checked as f64 / seed.total_regions.max(1) as f64).clamp(0.0, 1.0);
+            let label = format!(
+                "{} · {}/{} · {:.4}% · R({},{}) · {}",
+                seed.seed,
+                compact(seed.regions_checked as f64),
+                compact(seed.total_regions as f64),
+                ratio * 100.0,
+                seed.region_x,
+                seed.region_z,
+                elapsed(seed.elapsed_seconds)
+            );
+            let row = ratatui::layout::Rect::new(inner.x, inner.y + i as u16, inner.width, 1);
+            frame.render_widget(
+                Gauge::default()
+                    .ratio(ratio)
+                    .label(label)
+                    .gauge_style(Style::default().fg(Color::Cyan)),
+                row,
+            );
+        }
+    }
     let rows = screen.hits.iter().skip(screen.scroll).map(|hit| {
         let (positions, details, height) = hit_details(hit);
         Row::new([hit.seed.clone(), positions, details]).height(height)
@@ -402,7 +462,7 @@ fn draw(frame: &mut Frame<'_>, screen: &Screen) {
             .style(Style::default().add_modifier(Modifier::BOLD)),
     )
     .block(Block::bordered().title(" Latest results · retained 200 · full output via --output "));
-    frame.render_widget(table, layout[3]);
+    frame.render_widget(table, layout[4]);
     let footer = screen.error.as_deref().unwrap_or(
         "Space: pause/resume   ↑/↓: history   q: stop/save   Enter/q after finish: exit",
     );
@@ -412,7 +472,7 @@ fn draw(frame: &mut Frame<'_>, screen: &Screen) {
         } else {
             Color::DarkGray
         })),
-        layout[4],
+        layout[5],
     );
 }
 fn drain(receiver: &Receiver<Event>, screen: &mut Screen) {
@@ -518,6 +578,63 @@ fn tui(settings: Settings, options: RunOptions, control: Control) -> engine::Res
 mod tests {
     use super::*;
     use ratatui::backend::TestBackend;
+    #[test]
+    fn slow_seed_bars_render_and_fit_small_terminals() {
+        let mut screen = Screen::default();
+        screen.state.active_seeds = (0..12)
+            .map(|i| crate::events::SeedProgress {
+                seed: (4743858 + i).to_string(),
+                seed_bits: (4743858 + i).to_string(),
+                regions_checked: 1_000_000,
+                total_regions: 4_000_000,
+                region_x: -19,
+                region_z: 20,
+                elapsed_seconds: 65.0,
+            })
+            .collect();
+        for (w, h) in [(44, 14), (80, 20), (140, 40)] {
+            let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
+            terminal.draw(|f| draw(f, &screen)).unwrap();
+            let text: String = terminal
+                .backend()
+                .buffer()
+                .content
+                .iter()
+                .map(|c| c.symbol())
+                .collect();
+            if h >= 20 {
+                assert!(text.contains("Seed progress"));
+                assert!(text.contains("25.0000%"));
+            }
+            if h >= 40 {
+                assert!(text.contains("4743858"));
+                assert!(text.contains("4743869"));
+            }
+        }
+    }
+    #[test]
+    fn chart_and_label_use_chunk_rate() {
+        let mut screen = Screen::default();
+        screen.apply(Event::Progress {
+            state: Snapshot {
+                chunks_per_second: 1_260_000.0,
+                bases_per_second: 42.0,
+                ..Snapshot::default()
+            },
+        });
+        assert_eq!(screen.rates.back(), Some(&1_260_000));
+        let mut terminal = Terminal::new(TestBackend::new(120, 24)).unwrap();
+        terminal.draw(|f| draw(f, &screen)).unwrap();
+        let text: String = terminal
+            .backend()
+            .buffer()
+            .content
+            .iter()
+            .map(|c| c.symbol())
+            .collect();
+        assert!(text.contains("Chunks/s · 1.3M"));
+        assert!(text.contains("1.3M chunks/s"));
+    }
     #[test]
     fn readable_metrics() {
         assert_eq!(compact(999.0), "999");

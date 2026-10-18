@@ -12,7 +12,7 @@ use std::{
     io::{self, BufWriter, Write},
     path::{Path, PathBuf},
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicU64, Ordering},
     },
 };
@@ -52,6 +52,7 @@ pub struct Settings {
     pub shards: u32,
     pub output: Option<PathBuf>,
     pub script: Option<ScriptSpec>,
+    pub terrain_runtime: Option<PathBuf>,
 }
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -212,6 +213,7 @@ impl Default for Settings {
             shards: 1,
             output: None,
             script: None,
+            terrain_runtime: None,
         }
     }
 }
@@ -234,6 +236,7 @@ pub fn run(
     );
     let reporter = Reporter::start(control.clone(), observer.clone());
     let result = run_inner(settings, &options, &control, &observer);
+    control.set_terrain(None);
     drop(reporter);
     let error = result
         .as_ref()
@@ -339,6 +342,21 @@ fn run_inner(
     }
     settings.upper_count = Some(settings.upper_count());
     let plan = settings.validate()?;
+    if let Some(path) = &settings.terrain_runtime {
+        let prepared = crate::terrain::Terrain::start(
+            path,
+            &settings.query.version,
+            settings
+                .cores
+                .unwrap_or(std::thread::available_parallelism()?.get()),
+            control,
+        );
+        if control.is_cancelled() {
+            return Ok("cancelled".into());
+        }
+        let runtime = prepared?;
+        control.set_terrain(Some(runtime));
+    }
     if let Some(p) = &mut program {
         p.set_version(plan.mc);
     }
@@ -386,7 +404,9 @@ fn run_inner(
             return Err("Saved output file is missing; refusing to skip earlier results".into());
         }
     }
-    let mut gpu = if matches!(settings.mode, ExecutionMode::CpuAndGpu) {
+    let mut gpu = if matches!(settings.mode, ExecutionMode::CpuAndGpu)
+        && plan.estimated_work() <= 2_000_000
+    {
         Some(gpu::Gpu::new(
             settings.gpu_index.unwrap_or(0),
             gpu::Profile::Auto,
@@ -473,6 +493,14 @@ fn run_inner(
             native_order: plan.execution_order(),
         },
     );
+    // An unlimited upper-bit expansion may run for hours. Publish each hit
+    // immediately instead of waiting for all 65536 worlds in its base to finish.
+    let live_output = (max_results == 0 && settings.structure_seeds && settings.upper_count() > 64)
+        .then(|| LiveOutput {
+            writer: Mutex::new(writer.take()),
+            control,
+            observer,
+        });
     let evaluator = Evaluator {
         plan: &plan,
         program: program.as_ref(),
@@ -480,6 +508,7 @@ fn run_inner(
         control,
         placement_only: settings.placement_only,
         version: &settings.query.version,
+        live_output: live_output.as_ref(),
     };
     let mut emitted = 0_u64;
     // Small work units avoid a slow upper-bit expansion monopolizing a worker.
@@ -508,7 +537,9 @@ fn run_inner(
                 .iter()
                 .map(|&offset| settings.start + offset)
                 .collect();
-            Some(gpu.filter(&seeds)?)
+            let (mask, chunks) = gpu.filter_counted(&seeds)?;
+            m.chunks.fetch_add(chunks, Ordering::Relaxed);
+            Some(mask)
         } else {
             None
         };
@@ -536,9 +567,17 @@ fn run_inner(
                             return result;
                         }
                         let base = settings.start + offset;
-                        if let Some(geometry) = plan.geometry(base) {
-                            result.geometry_passed = 1;
-                            m.geometry.fetch_add(1, Ordering::Relaxed);
+                        if let Some(geometry) = plan.geometry_counted(base, || {
+                            if !control.wait() {
+                                return false;
+                            }
+                            m.chunks.fetch_add(1, Ordering::Relaxed);
+                            true
+                        }) {
+                            if !geometry.is_streaming() {
+                                result.geometry_passed = 1;
+                                m.geometry.fetch_add(1, Ordering::Relaxed);
+                            }
                             let (upper_start, upper_count) = if settings.structure_seeds {
                                 (u32::from(settings.upper_start), settings.upper_count())
                             } else {
@@ -677,6 +716,28 @@ fn run_inner(
     }
     .into())
 }
+struct LiveOutput<'a> {
+    writer: Mutex<Option<BufWriter<File>>>,
+    control: &'a Control,
+    observer: &'a Observer,
+}
+impl LiveOutput<'_> {
+    fn publish(&self, hit: Hit) -> std::result::Result<(), String> {
+        let mut writer = self.writer.lock().unwrap();
+        if let Some(out) = &mut *writer {
+            serde_json::to_writer(&mut *out, &hit).map_err(|e| e.to_string())?;
+            out.write_all(b"\n")
+                .and_then(|_| out.flush())
+                .map_err(|e| e.to_string())?;
+        }
+        self.control
+            .metrics()
+            .emitted
+            .fetch_add(1, Ordering::Relaxed);
+        events::emit(self.observer, self.control, Event::Match { hit });
+        Ok(())
+    }
+}
 struct Evaluator<'a> {
     plan: &'a Plan,
     program: Option<&'a Program>,
@@ -684,12 +745,27 @@ struct Evaluator<'a> {
     control: &'a Control,
     placement_only: bool,
     version: &'a str,
+    live_output: Option<&'a LiveOutput<'a>>,
 }
 impl Evaluator<'_> {
     fn check(&self, geometry: &crate::plan::Geometry, seed: u64, g: &mut Generator) -> Option<Hit> {
-        let mut hit = self
-            .plan
-            .check(geometry, seed, g, self.placement_only, self.version)?;
+        let mut hit = self.plan.check_counted(
+            geometry,
+            seed,
+            g,
+            self.placement_only,
+            self.version,
+            || {
+                if !self.control.wait() {
+                    return false;
+                }
+                self.control
+                    .metrics()
+                    .chunks
+                    .fetch_add(1, Ordering::Relaxed);
+                true
+            },
+        )?;
         if let Some(program) = self.program {
             self.control
                 .metrics()
@@ -724,6 +800,12 @@ impl Evaluator<'_> {
             .metrics()
             .matched
             .fetch_add(1, Ordering::Relaxed);
+        if let Some(output) = self.live_output {
+            if let Err(e) = output.publish(hit) {
+                self.control.fail(e);
+            }
+            return None;
+        }
         Some(hit)
     }
 }

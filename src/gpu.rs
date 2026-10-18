@@ -326,8 +326,11 @@ impl Gpu {
         }
     }
     pub fn filter(&mut self, seeds: &[u64]) -> R<Vec<u8>> {
+        self.filter_counted(seeds).map(|(mask, _)| mask)
+    }
+    pub(crate) fn filter_counted(&mut self, seeds: &[u64]) -> R<(Vec<u8>, u64)> {
         if seeds.is_empty() {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), 0));
         }
         unsafe {
             if seeds.len() > self.capacity {
@@ -340,7 +343,7 @@ impl Gpu {
                     self.passed = ptr::null_mut();
                 }
                 self.seeds = self.buffer(size_of_val(seeds), 4)?;
-                self.passed = self.buffer(seeds.len(), 2 /* write only */)?;
+                self.passed = self.buffer(size_of_val(seeds), 2 /* write only */)?;
                 self.capacity = seeds.len();
             }
             self.write(self.seeds, seeds)?;
@@ -398,14 +401,14 @@ impl Gpu {
                 ),
                 "kernel dispatch",
             )?;
-            let mut passed = vec![0_u8; seeds.len()];
+            let mut passed = vec![0_u64; seeds.len()];
             check(
                 (self.api.clEnqueueReadBuffer)(
                     self.queue,
                     self.passed,
                     1,
                     0,
-                    passed.len(),
+                    size_of_val(passed.as_slice()),
                     passed.as_mut_ptr().cast(),
                     0,
                     ptr::null(),
@@ -413,7 +416,8 @@ impl Gpu {
                 ),
                 "result download",
             )?;
-            Ok(passed)
+            let checks = passed.iter().map(|v| v >> 1).sum();
+            Ok((passed.into_iter().map(|v| (v & 1) as u8).collect(), checks))
         }
     }
 }
@@ -494,11 +498,9 @@ mod tests {
                     .collect();
                 for profile in [Profile::Apple, Profile::Nvidia, Profile::Generic] {
                     let mut gpu = Gpu::new(0, profile, &plan.gpu_rules()).unwrap();
-                    assert_eq!(
-                        gpu.filter(&seeds).unwrap(),
-                        expected,
-                        "{version} {profile:?}"
-                    );
+                    let (mask, checks) = gpu.filter_counted(&seeds).unwrap();
+                    assert!(checks >= seeds.len() as u64);
+                    assert_eq!(mask, expected, "{version} {profile:?}");
                     // Reuse buffers with a smaller unaligned final batch.
                     assert_eq!(gpu.filter(&seeds[..3]).unwrap(), expected[..3]);
                 }

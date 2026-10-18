@@ -32,15 +32,17 @@ int2 position(ulong seed, int x, int z, __global const int *c) {
 }
 int floor_div(int a, int b) { return a/b - ((a < 0) && (a%b != 0)); }
 int inside(int2 p, int r) { return abs(p.x) <= (uint)r && abs(p.y) <= (uint)r; }
-int rule_pass(ulong seed, __global const int *r) {
+int rule_pass(ulong seed, __global const int *r, ulong *checks) {
     int radius = r[10], ar = r[2]*16, br = r[6]*16, distance = r[9];
     for (int z = floor_div(-radius, ar); z <= floor_div(radius, ar); ++z) {
         for (int x = floor_div(-radius, ar); x <= floor_div(radius, ar); ++x) {
+            ++*checks;
             int2 a = position(seed, x, z, r+1);
             if (!inside(a, radius)) continue;
             if (r[0] == 0) return 1;
             for (int bz = floor_div(a.y-distance, br); bz <= floor_div(a.y+distance, br); ++bz) {
                 for (int bx = floor_div(a.x-distance, br); bx <= floor_div(a.x+distance, br); ++bx) {
+                    ++*checks;
                     int2 b = position(seed, bx, bz, r+5);
                     if (!inside(b, radius) || (r[11] && all(a == b))) continue;
                     long dx = (long)a.x - b.x, dz = (long)a.y - b.y;
@@ -52,11 +54,12 @@ int rule_pass(ulong seed, __global const int *r) {
     return 0;
 }
 __kernel void filter(__global const ulong *seeds, __global const int *rules,
-                     int rule_count, int count, __global uchar *passed) {
+                     int rule_count, int count, __global ulong *passed) {
     size_t i = get_global_id(0);
     if (i >= (size_t)count) return;
+    ulong checks = 0;
     for (int r = 0; r < rule_count; ++r) {
-        if (!rule_pass(seeds[i], rules+r*12)) { passed[i] = 0; return; }
+        if (!rule_pass(seeds[i], rules+r*12, &checks)) { passed[i] = checks << 1; return; }
     }
-    passed[i] = 1;
+    passed[i] = (checks << 1) | 1;
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 — 2026-10-18
+
+- Optional vanilla Java 26.2 runtime for exact mansion structure-start height, with batched queries, cached horizontal climate samples and safe early rejection.
+- Stream structure searches up to the world border without allocating the entire search area.
+- TUI chunk-check throughput chart and per-seed region progress; matching results stream before an upper-bit batch finishes.
+- Backend snapshots include chunk throughput and active-seed progress.
+- Exact-height setup guides, reproducible vanilla comparison benchmarks and updated Y=216 mansion screenshots.
+
 ## 0.4.1 — 2026-10-18
 
 - Binary-only release archives; license notices embedded in the `licenses` command.

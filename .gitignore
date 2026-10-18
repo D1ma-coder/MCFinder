@@ -9,3 +9,6 @@
 /.publish/
 __pycache__/
 *.pyc
+
+/.cache/
+/logs/

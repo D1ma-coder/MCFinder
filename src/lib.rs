@@ -10,3 +10,5 @@ pub mod protocol;
 pub mod script;
 
 pub use rhai;
+
+pub mod terrain;

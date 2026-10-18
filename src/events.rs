@@ -1,9 +1,10 @@
 use crate::plan::{Hit, Query};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeMap,
     sync::{
         Arc, Condvar, Mutex,
-        atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicI32, AtomicU8, AtomicU64, Ordering},
     },
     thread::JoinHandle,
     time::{Duration, Instant},
@@ -49,8 +50,49 @@ mod decimal {
             .map_err(serde::de::Error::custom)
     }
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SeedProgress {
+    pub seed: String,
+    pub seed_bits: String,
+    #[serde(with = "decimal")]
+    pub regions_checked: u64,
+    #[serde(with = "decimal")]
+    pub total_regions: u64,
+    pub region_x: i32,
+    pub region_z: i32,
+    pub elapsed_seconds: f64,
+}
+struct ScanState {
+    seed: u64,
+    total: u64,
+    checked: AtomicU64,
+    x: AtomicI32,
+    z: AtomicI32,
+    start: Instant,
+}
+pub(crate) struct ScanProgress {
+    control: Control,
+    id: u64,
+    state: Arc<ScanState>,
+}
+impl ScanProgress {
+    pub fn advance(&self, checked: u64, x: i32, z: i32) {
+        self.state.x.store(x, Ordering::Relaxed);
+        self.state.z.store(z, Ordering::Relaxed);
+        self.state
+            .checked
+            .store(checked.min(self.state.total), Ordering::Relaxed);
+    }
+}
+impl Drop for ScanProgress {
+    fn drop(&mut self) {
+        self.control.0.scans.lock().unwrap().remove(&self.id);
+    }
+}
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Snapshot {
+    #[serde(default)]
+    pub active_seeds: Vec<SeedProgress>,
     #[serde(with = "decimal")]
     pub bases_tested: u64,
     #[serde(with = "decimal")]
@@ -71,6 +113,12 @@ pub struct Snapshot {
     pub total_bases: u64,
     #[serde(with = "decimal")]
     pub cursor: u64,
+    /// Structure-start placement probes and explicit slime tests, including repeats.
+    #[serde(default, with = "decimal")]
+    pub chunk_checks: u64,
+    /// Probe throughput over the latest reporting interval, not generated terrain.
+    #[serde(default)]
+    pub chunks_per_second: f64,
     pub bases_per_second: f64,
     pub seeds_per_second: f64,
     pub average_bases_per_second: f64,
@@ -106,6 +154,7 @@ impl Counter {
 }
 #[derive(Default)]
 pub(crate) struct Metrics {
+    pub chunks: Counter,
     pub bases: Counter,
     pub seeds: Counter,
     pub geometry: Counter,
@@ -122,6 +171,8 @@ struct Rates {
     time: Instant,
     bases: u64,
     seeds: u64,
+    chunks: u64,
+    cps: f64,
     bps: f64,
     sps: f64,
 }
@@ -135,6 +186,9 @@ struct Inner {
     rates: Mutex<Rates>,
     error: Mutex<Option<String>>,
     metrics: Metrics,
+    terrain: Mutex<Option<Arc<crate::terrain::Terrain>>>,
+    scans: Mutex<BTreeMap<u64, Arc<ScanState>>>,
+    next_scan: AtomicU64,
 }
 /// A controller is created per search. It is safe to control a search from another thread.
 #[derive(Clone)]
@@ -158,12 +212,40 @@ impl Control {
                 time: now,
                 bases: 0,
                 seeds: 0,
+                chunks: 0,
+                cps: 0.0,
                 bps: 0.0,
                 sps: 0.0,
             }),
             error: Mutex::new(None),
             metrics: Metrics::default(),
+            terrain: Mutex::new(None),
+            scans: Mutex::new(BTreeMap::new()),
+            next_scan: AtomicU64::new(0),
         }))
+    }
+    pub(crate) fn start_scan(&self, seed: u64, total: u64) -> ScanProgress {
+        let id = self.0.next_scan.fetch_add(1, Ordering::Relaxed);
+        let state = Arc::new(ScanState {
+            seed,
+            total,
+            checked: AtomicU64::new(0),
+            x: AtomicI32::new(0),
+            z: AtomicI32::new(0),
+            start: Instant::now(),
+        });
+        self.0.scans.lock().unwrap().insert(id, state.clone());
+        ScanProgress {
+            control: self.clone(),
+            id,
+            state,
+        }
+    }
+    pub(crate) fn set_terrain(&self, terrain: Option<Arc<crate::terrain::Terrain>>) {
+        *self.0.terrain.lock().unwrap() = terrain;
+    }
+    pub(crate) fn terrain(&self) -> Result<Arc<crate::terrain::Terrain>, String> {
+        self.0.terrain.lock().unwrap().clone().ok_or_else(|| "Exact height requires --terrain-runtime FILE (prepare with scripts/prepare-terrain.py)".into())
     }
     pub fn pause(&self) {
         let _guard = self.0.lock.lock().unwrap();
@@ -215,6 +297,8 @@ impl Control {
             time: now,
             bases: 0,
             seeds: 0,
+            chunks: 0,
+            cps: 0.0,
             bps: 0.0,
             sps: 0.0,
         };
@@ -227,6 +311,9 @@ impl Control {
         let dt = now.duration_since(rates.time).as_secs_f64().max(1e-9);
         let bases = m.bases.load(Ordering::Relaxed);
         let seeds = m.seeds.load(Ordering::Relaxed);
+        let chunks = m.chunks.load(Ordering::Relaxed);
+        rates.cps = chunks.saturating_sub(rates.chunks) as f64 / dt;
+        rates.chunks = chunks;
         rates.bps = bases.saturating_sub(rates.bases) as f64 / dt;
         rates.sps = seeds.saturating_sub(rates.seeds) as f64 / dt;
         rates.bases = bases;
@@ -240,7 +327,26 @@ impl Control {
         let rates = self.0.rates.lock().unwrap();
         let elapsed = self.0.start.lock().unwrap().elapsed().as_secs_f64();
         let bases = m.bases.load(Ordering::Relaxed);
+        let active_seeds = self
+            .0
+            .scans
+            .lock()
+            .unwrap()
+            .values()
+            .map(|s| SeedProgress {
+                seed: (s.seed as i64).to_string(),
+                seed_bits: s.seed.to_string(),
+                regions_checked: s.checked.load(Ordering::Relaxed),
+                total_regions: s.total,
+                region_x: s.x.load(Ordering::Relaxed),
+                region_z: s.z.load(Ordering::Relaxed),
+                elapsed_seconds: s.start.elapsed().as_secs_f64(),
+            })
+            .collect();
         Snapshot {
+            active_seeds,
+            chunk_checks: m.chunks.load(Ordering::Relaxed),
+            chunks_per_second: rates.cps,
             bases_tested: bases,
             seeds_evaluated: m.seeds.load(Ordering::Relaxed),
             geometry_passed: m.geometry.load(Ordering::Relaxed),
@@ -327,5 +433,27 @@ impl Drop for Reporter {
         if let Some(thread) = self.thread.take() {
             let _ = thread.join();
         }
+    }
+}
+
+#[cfg(test)]
+mod scan_tests {
+    use super::*;
+    #[test]
+    fn scan_lifetime_and_exact_json_counters() {
+        let control = Control::new();
+        let scan = control.start_scan(u64::MAX, 2_197_359_376);
+        scan.advance(1_000_001, -23438, 19);
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.active_seeds.len(), 1);
+        let seed = &snapshot.active_seeds[0];
+        assert_eq!(seed.seed, "-1");
+        assert_eq!(seed.regions_checked, 1_000_001);
+        assert_eq!(seed.region_x, -23438);
+        let json = serde_json::to_value(snapshot).unwrap();
+        assert_eq!(json["active_seeds"][0]["total_regions"], "2197359376");
+        assert_eq!(json["active_seeds"][0]["seed_bits"], u64::MAX.to_string());
+        drop(scan);
+        assert!(control.snapshot().active_seeds.is_empty());
     }
 }

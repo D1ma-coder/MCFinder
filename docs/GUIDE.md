@@ -56,8 +56,8 @@ Use one line in PowerShell and replace the binary with `.\mcfinder.exe`.
 | Panel / key | Meaning |
 |---|---|
 | Results | Number of emitted results; Matched includes accepted speculative work |
-| Speed | Bases and full worlds per second during the most recent reporting period |
-| Tested | Work already performed; K/M/B/T abbreviations are presentation only |
+| Speed | Chunk checks and full worlds per second during the most recent reporting period |
+| Started | Bases/worlds that entered their checks; these may still be active. Committed counts the completed prefix. |
 | Committed | Exact completed bases / range; safe committed prefix and readable elapsed time |
 | Speed history | Recent reporting periods across the available chart width |
 | Locations | Script `{x,z}` / `{x,y,z}` objects, including nested arrays; otherwise native evidence |
@@ -139,17 +139,17 @@ fn matches(world, candidate) {
 | `world.lower48()`, `world.upper16()` | Structure base and biome upper bits |
 | `world.position(name, region_x, region_z)` | Placement `{x,z}` or `()`; no biome check; region coordinates |
 | `world.viable(name,x,z)` | Biome validity at a placement anchor |
-| `world.structures(name,x,z,radius,biomes)` | Circular query; block coordinates; radius 0..100000 |
+| `world.structures(name,x,z,radius,biomes)` | Circular query; block coordinates; radius 0..30000000 |
 | `world.biome(x,y,z)` | Cubiomes biome ID; y −64..320 |
 | `world.spawn_estimate()` | Approximate `{x,z}`, no exact spawn Y |
 | `world.slime_chunk(chunk_x,chunk_z)` | Slime-chunk predicate |
 | `world.mansion_base_y_estimate(x,z)` | 1.18+: minimum climate-depth height estimate at four rotated placement probes |
-| `world.high_mansion(min_y,regions)` | 1.18+: native scan over `[-regions,regions)` on each axis, regions 1..16; candidate metadata or `()` |
+| `world.high_mansion(min_y,regions)` | 1.18+: native scan over `[-regions,regions)` on each axis, regions 1..23438; candidate metadata or `()` |
 | `distance2(x,z,a,b)` | Squared distance without rounding |
 
 `high_mansion(170.0,4)` inspects 64 regions. It rejects low positions before biome validation, returning the first accepted mansion for that seed. Its height is **not** a generated surface or foundation measurement. The script helper's region grid is explicit and independent of Query.radius.
 
-Resource limits: source ≤1 MiB; 100000 operations per call by default (backend may set `ScriptSpec.max_operations` up to 10000000); call depth 32; array length 4096; native probe budget 100000 per seed. `import`/`eval` are disabled and script prints are suppressed. Native extensions are trusted code, not a security sandbox.
+Resource limits: source ≤1 MiB; 100000 operations per call by default (backend may set `ScriptSpec.max_operations` up to 10000000); call depth 32; array length 4096; scalar native probe budget 100000 per seed (streaming native scans count as one call and check cancellation per region). `import`/`eval` are disabled and script prints are suppressed. Native extensions are trusted code, not a security sandbox.
 
 Compile without searching: `mcfinder check-script FILE`. See [examples](../examples/scripts), [baseline terrain loop](../examples/benchmarks/high-mansion-script.rhai) and [full API reference](ENGINE.md).
 
@@ -179,7 +179,7 @@ Start `mcfinder serve`. One input line = one command with a unique `id`; one out
 
 Search events have `protocol:1`, monotonic `seq`, and `job_id` matching the start id: `started`, `ready`, `progress`, `match`, `error`, `finished`. `ready` includes device profiles, script SHA-256 and native rule order. `finished.summary.status` is `complete`, `limit_reached`, `cancelled` or `failed`. Failed scripts do not permanently kill the persistent host.
 
-**State fields:** `bases_tested`, `seeds_evaluated`, `geometry_passed`, `scripts_evaluated`, `matches_found`, `results_emitted`, `bases_committed`, `completed_before_run`, `cursor`, `total_bases`, `bases_per_second`, `seeds_per_second`, `average_bases_per_second`, `elapsed_seconds`, `phase`, `paused`, `cancelled`. [Detailed definitions](ENGINE.md#jsonl-protocol-v1).
+**State fields:** `bases_tested`, `seeds_evaluated`, `geometry_passed`, `scripts_evaluated`, `matches_found`, `results_emitted`, `bases_committed`, `completed_before_run`, `cursor`, `total_bases`, `chunk_checks`, `chunks_per_second`, `bases_per_second`, `seeds_per_second`, `average_bases_per_second`, `elapsed_seconds`, `phase`, `paused`, `cancelled`. [Detailed definitions](ENGINE.md#jsonl-protocol-v1).
 
 `progress` is produced by an independent one-second reporter during long filters and pauses. Slow pipes create backpressure; delivery once per second cannot be guaranteed if the client stops reading. EOF cancels active work and saves its safe prefix. For a single event stream without controls, use `search --ui backend`.
 
@@ -267,3 +267,13 @@ Remaining overhead includes full biome-noise initialization, separate native/scr
 | macOS/Windows warns about download | Published binaries are unsigned; verify checksum/provenance or build from source |
 
 [Back to top](#mcfinder-handbook) · [Russian reference](ENGINE.md) · [Home](../README.md)
+
+## Large search areas and chunk throughput
+
+`Query.radius` / `--radius` accepts 0..30,000,000 blocks: a square centered on X=0, Z=0, bounded by the world. Large native queries stream candidate validation rather than retaining the full grid. Above an estimated 2 million probes per seed, the engine uses CPU streaming even in `cpu-and-gpu` mode, so cancellation stays responsive; low-48-bit candidate caching is skipped for these queries. `world.structures()` clips its circle to the world boundary and retains its 4096-result array limit.
+
+For a high mansion, use `world.high_mansion_in_square(170.0, 40960)`. The second argument is a square radius in blocks, independent of `Query.radius`; it accepts the same 0..30,000,000 range. `high_mansion(min_y, regions)` remains available with a region radius up to 23438, clipping the last region to the world. Both return the first matching candidate and allocate no area-sized array. The example searches ±40,960 blocks by default.
+
+The TUI graph and its abbreviated numeric label show **chunk checks per second**. One check means a structure-start candidate probe or an explicit slime-chunk test. Repeated probes count again, including the CPU verification of GPU candidates. This is actual query work, not unique chunks, generated terrain, or the number of chunks inside the search square. Biome/height/spawn helper internals are not expanded into invented chunk counts. Backend state adds decimal-string `chunk_checks` and numeric `chunks_per_second`; existing base/world rates remain available.
+
+Exact vanilla Java 26.2 mansion height is available through an optional runtime: [setup, API and benchmarks](EXACT_TERRAIN.md).

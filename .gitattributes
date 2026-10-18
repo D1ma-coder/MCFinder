@@ -7,3 +7,5 @@ vendor/** linguist-vendored
 *.png binary
 *.gif binary
 *.webp binary
+*.java text eol=lf
+*.py text eol=lf

@@ -138,10 +138,10 @@ pub fn capabilities() -> Value {
     json!({"event":"capabilities", "engine_version":env!("CARGO_PKG_VERSION"), "protocol_version":1,
         "interfaces":["tui","backend","rust-sdk"], "modes":["cpu-only","cpu-and-gpu"],
         "scripts":{"language":"rhai","functions":["configure","matches"],"max_source_bytes":1048576,"default_max_operations":100000,
-            "world_api":["seed","seed_bits","lower48","upper16","position","structures","viable","biome","spawn","slime_chunk"],
+            "world_api":["seed","seed_bits","lower48","upper16","position","structures","viable","biome","spawn","slime_chunk","high_mansion_in_square","mansion_base_y_estimate","surface_y_exact","mansion_base_y_exact","high_mansion_exact"],
             "gpu":"native declarative filters only; custom predicates execute on CPU"},
         "versions":backend::VERSIONS, "experimental_versions_from":"1.21.5",
-        "world_data":{"structures":true,"biomes":true,"spawn":"approximate","blocks":false,"terrain_height":false,"loot":false},
+        "world_data":{"structures":true,"biomes":true,"spawn":"approximate","blocks":false,"terrain_height":false,"exact_terrain":{"requires":"terrain_runtime","versions":["26.2"],"structures":["mansion"],"scope":"default overworld structure-start height; not final decorated blocks"},"loot":false},
         "heartbeat_seconds":1, "counter_encoding":"decimal strings", "max_active_jobs":1})
 }
 pub fn serve() -> engine::Result<()> {

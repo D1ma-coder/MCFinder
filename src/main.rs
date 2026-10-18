@@ -68,13 +68,16 @@ struct Search {
     /// Rhai configure()/matches() script; compiled once per job.
     #[arg(long, conflicts_with = "config", help_heading = "Query")]
     script: Option<PathBuf>,
+    /// Optional prepared vanilla 26.2 runtime for exact structure height.
+    #[arg(long, help_heading = "Query")]
+    terrain_runtime: Option<PathBuf>,
     /// Human TUI, JSONL backend events, or legacy plain output. Auto uses TUI on a TTY.
     #[arg(long, value_enum, default_value_t = Interface::Auto, help_heading = "Output")]
     ui: Interface,
     /// Exact Minecraft Java version; required unless supplied by --config.
     #[arg(long, required_unless_present_any = ["config","script"], help_heading = "Query")]
     version: Option<String>,
-    /// Search square extends from -R to +R blocks on both axes [default: 4096].
+    /// Search square extends from -R to +R blocks; R=0..30000000 [default: 4096].
     #[arg(long, help_heading = "Query")]
     radius: Option<i32>,
     /// Require STRUCTURE:STRUCTURE:BLOCKS; repeat to combine with AND.
@@ -311,6 +314,7 @@ fn execute() -> Result<()> {
                 shards: args.shards,
                 output: args.output.map(absolute).transpose()?,
                 script,
+                terrain_runtime: args.terrain_runtime.map(absolute).transpose()?,
             };
             let next = u64::from(settings.shard_id).min(settings.count);
             let checkpoint = args.checkpoint.map(absolute).transpose()?;

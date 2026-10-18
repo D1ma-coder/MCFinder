@@ -1,0 +1,42 @@
+{
+  "hardware": "Apple M2 Pro",
+  "architecture": "arm64",
+  "os": "Darwin",
+  "java": "openjdk version \"27\" 2026-09-15",
+  "timing": "JVM startup excluded; JSONL transport included; median of three passes",
+  "batch_audit_requests": 195,
+  "version": "26.2",
+  "threads": 4,
+  "samples_per_pass": 2057,
+  "audit_cases": 8228,
+  "accepted_audit_cases": 44,
+  "biome_rejections": 8052,
+  "terrain_columns_evaluated": 308,
+  "vanilla_baseline_columns_upper_bound": 32912,
+  "benchmarks": [
+    {
+      "min_y": 150,
+      "baseline_seconds_median": 3.8815296669490635,
+      "optimized_seconds_median": 0.0470182920107618,
+      "baseline_candidates_per_second": 529.9457112269944,
+      "optimized_candidates_per_second": 43748.93072528417,
+      "speedup": 82.55360841394746,
+      "batch_size": 32,
+      "batch32_seconds_median": 0.038074832991696894,
+      "batch32_candidates_tested": 2049,
+      "batch32_candidates_per_second": 53815.07518225575
+    },
+    {
+      "min_y": 190,
+      "baseline_seconds_median": 3.83945708302781,
+      "optimized_seconds_median": 0.03954966692253947,
+      "baseline_candidates_per_second": 535.7528305480738,
+      "optimized_candidates_per_second": 52010.55179627087,
+      "speedup": 97.07937845715944,
+      "batch_size": 32,
+      "batch32_seconds_median": 0.03340174991171807,
+      "batch32_candidates_tested": 2057,
+      "batch32_candidates_per_second": 61583.59982446186
+    }
+  ]
+}

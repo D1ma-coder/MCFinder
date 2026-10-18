@@ -68,18 +68,23 @@ pub struct Hit {
 #[derive(Default)]
 pub struct Geometry {
     rules: Vec<Vec<(Site, Option<Site>)>>,
+    streaming: bool,
+}
+impl Geometry {
+    pub(crate) fn is_streaming(&self) -> bool {
+        self.streaming
+    }
 }
 impl Plan {
     pub fn new(query: &Query) -> Result<Self, String> {
-        if !(0..=100_000).contains(&query.radius) {
-            return Err("radius must be 0..100000 blocks".into());
+        if !(0..=30_000_000).contains(&query.radius) {
+            return Err("radius must be 0..30000000 blocks".into());
         }
         if query.rules.len() > 32 {
             return Err("Use at most 32 native rules".into());
         }
         let mc = backend::version(&query.version)?;
         let mut rules = Vec::new();
-        let mut budget = 0_u64;
         for (index, rule) in query.rules.iter().enumerate() {
             let (mut a, mut b, distance) = match *rule {
                 Rule::Near { a, b, distance } => (a, Some(b), distance),
@@ -110,7 +115,6 @@ impl Plan {
             } else {
                 1
             };
-            budget = budget.saturating_add(side * side * local);
             rules.push(CompiledRule {
                 rule: rule.clone(),
                 a,
@@ -120,9 +124,6 @@ impl Plan {
                 index,
                 cost: side * side * local,
             });
-        }
-        if budget > 2_000_000 {
-            return Err("Query exceeds 2M region probes per seed; reduce radius/distance".into());
         }
         // Cheap, selective position checks precede spawn-dependent validation.
         rules.sort_by_key(|r| (matches!(r.rule, Rule::SpawnNear { .. }), r.cost));
@@ -160,60 +161,107 @@ impl Plan {
     }
     /// Geometry only: does not construct a biome generator or apply a 64-bit seed.
     pub fn geometry(&self, seed: u64) -> Option<Geometry> {
+        self.geometry_impl(seed, false, || true)
+    }
+    /// Each callback represents one structure-start chunk probe; false cancels.
+    pub(crate) fn geometry_counted(
+        &self,
+        seed: u64,
+        probe: impl FnMut() -> bool,
+    ) -> Option<Geometry> {
+        self.geometry_impl(seed, true, probe)
+    }
+    fn geometry_impl(
+        &self,
+        seed: u64,
+        allow_streaming: bool,
+        mut probe: impl FnMut() -> bool,
+    ) -> Option<Geometry> {
+        if allow_streaming && self.estimated_work() > 2_000_000 {
+            return Some(Geometry {
+                rules: Vec::new(),
+                streaming: true,
+            });
+        }
         let mut result = Geometry::default();
         for rule in &self.rules {
             let mut options = Vec::new();
-            for rz in (-self.radius).div_euclid(rule.ar)..=self.radius.div_euclid(rule.ar) {
-                for rx in (-self.radius).div_euclid(rule.ar)..=self.radius.div_euclid(rule.ar) {
-                    let Some(p) = backend::position(self.mc, rule.a, seed, rx, rz) else {
-                        continue;
-                    };
-                    if !self.inside(p) {
-                        continue;
-                    }
-                    let a = Site {
-                        structure: rule.a,
-                        position: p,
-                    };
-                    match rule.rule {
-                        Rule::SpawnNear { .. } => options.push((a, None)),
-                        Rule::Near { distance, .. } => {
-                            let d = distance as i32;
-                            for bz in (p.z - d).div_euclid(rule.br)..=(p.z + d).div_euclid(rule.br)
-                            {
-                                for bx in
-                                    (p.x - d).div_euclid(rule.br)..=(p.x + d).div_euclid(rule.br)
-                                {
-                                    let b = rule.b.unwrap();
-                                    let Some(q) = backend::position(self.mc, b, seed, bx, bz)
-                                    else {
-                                        continue;
-                                    };
-                                    // Same-type rules must refer to two distinct structures.
-                                    if self.inside(q)
-                                        && !(a.structure == b && p == q)
-                                        && p.distance2(q) <= i64::from(distance).pow(2)
-                                    {
-                                        options.push((
-                                            a,
-                                            Some(Site {
-                                                structure: b,
-                                                position: q,
-                                            }),
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            self.visit_candidates(rule, seed, &mut probe, &mut |a, b| {
+                options.push((a, b));
+                true
+            });
             if options.is_empty() {
                 return None;
             }
             result.rules.push(options);
         }
         Some(result)
+    }
+    // Return false when cancelled or when the visitor has enough evidence.
+    fn visit_candidates(
+        &self,
+        rule: &CompiledRule,
+        seed: u64,
+        probe: &mut impl FnMut() -> bool,
+        visit: &mut impl FnMut(Site, Option<Site>) -> bool,
+    ) -> bool {
+        for rz in (-self.radius).div_euclid(rule.ar)..=self.radius.div_euclid(rule.ar) {
+            for rx in (-self.radius).div_euclid(rule.ar)..=self.radius.div_euclid(rule.ar) {
+                if !probe() {
+                    return false;
+                }
+                let Some(p) = backend::position(self.mc, rule.a, seed, rx, rz) else {
+                    continue;
+                };
+                if !self.inside(p) {
+                    continue;
+                }
+                let a = Site {
+                    structure: rule.a,
+                    position: p,
+                };
+                match rule.rule {
+                    Rule::SpawnNear { .. } => {
+                        if !visit(a, None) {
+                            return false;
+                        }
+                    }
+                    Rule::Near { distance, .. } => {
+                        let d = distance as i32;
+                        // Clip the secondary query to the world/search square too.
+                        for bz in (p.z - d).max(-self.radius).div_euclid(rule.br)
+                            ..=(p.z + d).min(self.radius).div_euclid(rule.br)
+                        {
+                            for bx in (p.x - d).max(-self.radius).div_euclid(rule.br)
+                                ..=(p.x + d).min(self.radius).div_euclid(rule.br)
+                            {
+                                if !probe() {
+                                    return false;
+                                }
+                                let b = rule.b.unwrap();
+                                let Some(q) = backend::position(self.mc, b, seed, bx, bz) else {
+                                    continue;
+                                };
+                                if self.inside(q)
+                                    && !(a.structure == b && p == q)
+                                    && p.distance2(q) <= i64::from(distance).pow(2)
+                                    && !visit(
+                                        a,
+                                        Some(Site {
+                                            structure: b,
+                                            position: q,
+                                        }),
+                                    )
+                                {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        true
     }
     pub fn check(
         &self,
@@ -223,15 +271,36 @@ impl Plan {
         placement_only: bool,
         version: &str,
     ) -> Option<Hit> {
+        self.check_counted(geometry, seed, g, placement_only, version, || true)
+    }
+    pub(crate) fn check_counted(
+        &self,
+        geometry: &Geometry,
+        seed: u64,
+        g: &mut Generator,
+        placement_only: bool,
+        version: &str,
+        mut probe: impl FnMut() -> bool,
+    ) -> Option<Hit> {
         if !placement_only && !self.rules.is_empty() {
             g.seed(seed);
         }
         let mut spawn = None;
         let mut viable = HashMap::new();
         let mut evidence = Vec::new();
-        for (rule, candidates) in self.rules.iter().zip(&geometry.rules) {
+        for (index, rule) in self.rules.iter().enumerate() {
+            let scan_radius = if geometry.streaming {
+                if let Rule::SpawnNear { distance, .. } = rule.rule {
+                    let p = *spawn.get_or_insert_with(|| g.spawn());
+                    self.radius.min(p.x.abs().max(p.z.abs()) + distance as i32)
+                } else {
+                    self.radius
+                }
+            } else {
+                self.radius
+            };
             let mut found = None;
-            for &(a, b) in candidates {
+            let mut validate = |a: Site, b: Option<Site>| {
                 let (other, distance_limit) = match rule.rule {
                     Rule::Near { distance, .. } => (b.unwrap().position, distance),
                     Rule::SpawnNear { distance, .. } => {
@@ -240,16 +309,20 @@ impl Plan {
                 };
                 let d2 = a.position.distance2(other);
                 if d2 > i64::from(distance_limit).pow(2) {
-                    continue;
+                    return true;
                 }
                 let mut is_viable = |site: Site| -> bool {
                     placement_only
-                        || *viable
-                            .entry((site.structure, site.position.x, site.position.z))
-                            .or_insert_with(|| g.viable(site.structure, site.position))
+                        || if geometry.streaming {
+                            g.viable(site.structure, site.position)
+                        } else {
+                            *viable
+                                .entry((site.structure, site.position.x, site.position.z))
+                                .or_insert_with(|| g.viable(site.structure, site.position))
+                        }
                 };
                 if !is_viable(a) || b.is_some_and(|b| !is_viable(b)) {
-                    continue;
+                    return true;
                 }
                 let mut sites = vec![a];
                 if let Some(b) = b {
@@ -260,7 +333,21 @@ impl Plan {
                     sites,
                     distance: (d2 as f64).sqrt(),
                 });
-                break;
+                false
+            };
+            if geometry.streaming {
+                let scan = Plan {
+                    mc: self.mc,
+                    radius: scan_radius,
+                    rules: Vec::new(),
+                };
+                scan.visit_candidates(rule, seed, &mut probe, &mut validate);
+            } else {
+                for &(a, b) in &geometry.rules[index] {
+                    if !validate(a, b) {
+                        break;
+                    }
+                }
             }
             evidence.push(found?);
         }
@@ -292,6 +379,61 @@ pub fn is_experimental(version: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn streaming_validation_matches_cached_geometry() {
+        let plan = Plan::new(&Query {
+            version: "1.18.2".into(),
+            radius: 2048,
+            rules: vec![Rule::Near {
+                a: Structure::Village,
+                b: Structure::Mansion,
+                distance: 384,
+            }],
+        })
+        .unwrap();
+        let mut generator = Generator::new(plan.mc);
+        for seed in 0..32 {
+            let cached = plan
+                .geometry(seed)
+                .and_then(|geo| plan.check(&geo, seed, &mut generator, false, "1.18.2"));
+            let streaming = Geometry {
+                rules: Vec::new(),
+                streaming: true,
+            };
+            let actual = plan.check(&streaming, seed, &mut generator, false, "1.18.2");
+            assert_eq!(
+                serde_json::to_value(actual).unwrap(),
+                serde_json::to_value(cached).unwrap()
+            );
+        }
+    }
+    #[test]
+    fn world_radius_uses_streaming_and_honors_cancellation() {
+        let mut query = Query {
+            version: "1.18.2".into(),
+            radius: 30_000_000,
+            rules: vec![Rule::Near {
+                a: Structure::Village,
+                b: Structure::Mansion,
+                distance: 0,
+            }],
+        };
+        let plan = Plan::new(&query).unwrap();
+        let geometry = plan.geometry_counted(0, || true).unwrap();
+        assert!(geometry.streaming);
+        let mut generator = Generator::new(plan.mc);
+        let mut probes = 0;
+        assert!(
+            plan.check_counted(&geometry, 0, &mut generator, true, "1.18.2", || {
+                probes += 1;
+                probes < 100
+            })
+            .is_none()
+        );
+        assert_eq!(probes, 100);
+        query.radius += 1;
+        assert!(Plan::new(&query).is_err());
+    }
     #[test]
     fn squared_distance_and_negative_regions() {
         assert_eq!(Pos { x: -3, z: 4 }.distance2(Pos::default()), 25);

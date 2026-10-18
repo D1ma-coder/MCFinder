@@ -331,3 +331,51 @@ fn native_extensions_are_callable_from_scripts_and_required_on_restore() {
     );
     std::fs::remove_file(checkpoint).unwrap();
 }
+
+#[test]
+fn unlimited_upper_expansion_emits_without_waiting_for_the_base() {
+    struct OtherWorlds;
+    impl SeedFilter for OtherWorlds {
+        fn evaluate(&self, seed: u64, _: &Hit) -> Result<Option<Value>, String> {
+            if seed == 0 {
+                return Ok(Some(json!({"ready":true})));
+            }
+            std::thread::sleep(Duration::from_millis(100));
+            Ok(None)
+        }
+    }
+    let control = Control::new();
+    let stop = control.clone();
+    let observer: Observer = Arc::new(move |event| {
+        if let Event::Match { hit } = event {
+            assert_eq!(hit.seed, "0");
+            stop.cancel();
+        }
+        Ok(())
+    });
+    let settings = Settings {
+        query: Query {
+            version: "1.18.2".into(),
+            radius: 0,
+            rules: vec![],
+        },
+        structure_seeds: true,
+        upper_count: Some(128),
+        count: 1,
+        cores: Some(1),
+        ..Default::default()
+    };
+    let summary = engine::run(
+        settings,
+        RunOptions {
+            filter: Some(Arc::new(OtherWorlds)),
+            ..Default::default()
+        },
+        control,
+        observer,
+    )
+    .unwrap();
+    assert_eq!(summary.status, "cancelled");
+    assert_eq!(summary.state.results_emitted, 1);
+    assert_eq!(summary.state.bases_committed, 0);
+}
