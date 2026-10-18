@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1 — 2026-10-18
+
+- Original animated block-letter SVG wordmark with reduced-motion support.
+
+- Preserve strict floating-point compilation on MSVC by using equivalent static double literals in vendored noise tables.
+- Describe screenshots directly, with seed and coordinates, without attribution wording.
+
 ## 0.4.0 — 2026-10-18
 
 - Native high-mansion terrain estimate scans with early rejection and identical-result regression tests.

@@ -1,4 +1,4 @@
-MCFinder 0.4.0 brings native terrain-estimate searches, readable script coordinates in TUI, bilingual documentation, reproducible benchmarks and portable release builds.
+MCFinder 0.4.1 adds an animated block-letter wordmark and brings native terrain-estimate searches, readable script coordinates in TUI, bilingual documentation, reproducible benchmarks and portable release builds.
 
 ### Downloads
 
@@ -18,3 +18,5 @@ Accuracy: results are structure/biome candidates. Height and spawn are approxima
 
 Русский README: https://github.com/D1ma-coder/MCFinder/blob/main/README.ru.md
 Руководство: https://github.com/D1ma-coder/MCFinder/blob/main/docs/GUIDE.ru.md
+
+Windows compatibility: static Cubiomes noise constants are expressed as equivalent decimal double literals, retaining /fp:strict.

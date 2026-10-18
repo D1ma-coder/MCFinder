@@ -1,6 +1,6 @@
 [package]
 name = "mcfinder"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 description = "Scriptable CPU/GPU Minecraft seed search engine with TUI and JSONL backend"
 exclude = ["dist/**", "target/**", "*.jsonl"]

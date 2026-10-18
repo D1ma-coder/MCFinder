@@ -215,7 +215,7 @@ Use `BigInt(event.hit.seed_bits)` for calculations; do not convert it to a JavaS
 
 ```toml
 [dependencies]
-mcfinder = { git = "https://github.com/D1ma-coder/MCFinder", tag = "v0.4.0" }
+mcfinder = { git = "https://github.com/D1ma-coder/MCFinder", tag = "v0.4.1" }
 ```
 
 `engine::run(Settings,RunOptions,Control,Observer)` owns no global signal handlers and does not write to stdout/stderr. Use a new Control per run and a fast, thread-safe observer. `pause()`, `resume()`, `cancel()` and `snapshot()` can be called from another thread.

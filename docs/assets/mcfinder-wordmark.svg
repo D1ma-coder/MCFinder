@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="260" viewBox="0 0 1000 260" role="img" aria-labelledby="title description">
+<title id="title">MCFinder</title>
+<desc id="description">Original block-letter MCFinder wordmark with stone faces, dark extruded edges and a subtle moving highlight.</desc>
+<defs>
+  <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#f8faf5"/><stop offset=".42" stop-color="#d6dbd1"/>
+    <stop offset=".43" stop-color="#bbc3b5"/><stop offset="1" stop-color="#8e9c83"/>
+  </linearGradient>
+  <linearGradient id="shine">
+    <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+    <stop offset=".5" stop-color="#fff" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+  <g id="letters"><path d="M0 0 L18 0 L18 18 L36 18 L36 36 L18 36 L18 54 L18 72 L18 90 L18 108 L18 126 L0 126 L0 108 L0 90 L0 72 L0 54 L0 36 L0 18 L0 0Z M36 36 L54 36 L54 18 L72 18 L72 0 L90 0 L90 18 L90 36 L90 54 L90 72 L90 90 L90 108 L90 126 L72 126 L72 108 L72 90 L72 72 L72 54 L72 36 L54 36 L54 54 L54 72 L36 72 L36 54 L36 36Z" transform="translate(0 0)"/>
+<path d="M0 18 L18 18 L18 0 L36 0 L54 0 L72 0 L90 0 L90 18 L72 18 L54 18 L36 18 L36 36 L18 36 L18 54 L18 72 L18 90 L36 90 L36 108 L54 108 L72 108 L90 108 L90 126 L72 126 L54 126 L36 126 L18 126 L18 108 L0 108 L0 90 L0 72 L0 54 L0 36 L0 18Z" transform="translate(108 0)"/>
+<path d="M0 0 L18 0 L36 0 L54 0 L72 0 L90 0 L90 18 L72 18 L54 18 L36 18 L18 18 L18 36 L18 54 L36 54 L54 54 L72 54 L72 72 L54 72 L36 72 L18 72 L18 90 L18 108 L18 126 L0 126 L0 108 L0 90 L0 72 L0 54 L0 36 L0 18 L0 0Z" transform="translate(216 0)"/>
+<path d="M0 36 L18 36 L36 36 L36 54 L36 72 L36 90 L36 108 L54 108 L54 126 L36 126 L18 126 L0 126 L0 108 L18 108 L18 90 L18 72 L18 54 L0 54 L0 36Z M18 0 L36 0 L36 18 L18 18 L18 0Z" transform="translate(324 0)"/>
+<path d="M0 36 L18 36 L36 36 L54 36 L72 36 L72 54 L54 54 L36 54 L18 54 L18 72 L18 90 L18 108 L18 126 L0 126 L0 108 L0 90 L0 72 L0 54 L0 36Z M72 54 L90 54 L90 72 L90 90 L90 108 L90 126 L72 126 L72 108 L72 90 L72 72 L72 54Z" transform="translate(396 0)"/>
+<path d="M0 54 L18 54 L18 36 L36 36 L54 36 L72 36 L72 18 L72 0 L90 0 L90 18 L90 36 L90 54 L90 72 L90 90 L90 108 L90 126 L72 126 L54 126 L36 126 L18 126 L18 108 L0 108 L0 90 L0 72 L0 54Z M18 54 L18 72 L18 90 L18 108 L36 108 L54 108 L72 108 L72 90 L72 72 L72 54 L54 54 L36 54 L18 54Z" transform="translate(504 0)"/>
+<path d="M0 54 L18 54 L18 36 L36 36 L54 36 L72 36 L72 54 L54 54 L36 54 L18 54 L18 72 L36 72 L54 72 L72 72 L72 54 L90 54 L90 72 L90 90 L72 90 L54 90 L36 90 L18 90 L18 108 L0 108 L0 90 L0 72 L0 54Z M18 108 L36 108 L54 108 L72 108 L90 108 L90 126 L72 126 L54 126 L36 126 L18 126 L18 108Z" transform="translate(612 0)"/>
+<path d="M0 36 L18 36 L18 54 L36 54 L36 36 L54 36 L72 36 L72 54 L54 54 L36 54 L36 72 L18 72 L18 90 L18 108 L18 126 L0 126 L0 108 L0 90 L0 72 L0 54 L0 36Z" transform="translate(720 0)"/></g>
+  <clipPath id="letter-clip"><use href="#letters"/></clipPath>
+</defs>
+<style>
+  .float { animation: hover 5s ease-in-out infinite; transform-origin: 500px 130px; }
+  .shine { animation: sweep 8s ease-in-out infinite; }
+  .spark { animation: twinkle 4s ease-in-out infinite; }
+  @keyframes hover { 0%,100% {transform:translateY(0)} 50% {transform:translateY(-3px)} }
+  @keyframes sweep { 0%,35% {transform:translateX(-220px)} 75%,100% {transform:translateX(1120px)} }
+  @keyframes twinkle { 0%,100% {opacity:.25} 50% {opacity:.85} }
+  @media (prefers-reduced-motion: reduce) { .float,.shine,.spark {animation:none} .shine {display:none} }
+</style>
+<g class="float">
+  <g transform="translate(101.0 73)">
+    <use href="#letters" transform="translate(10 14)" fill="#18241c" stroke="#111b17" stroke-width="10" stroke-linejoin="miter"/>
+    <use href="#letters" transform="translate(7 10)" fill="#354a32" stroke="#1b2b20" stroke-width="6"/>
+    <use href="#letters" transform="translate(3 5)" fill="#53674a" stroke="#243629" stroke-width="5"/>
+    <use href="#letters" fill="url(#stone)" stroke="#26382b" stroke-width="4" stroke-linejoin="miter" paint-order="stroke fill"/>
+    <g clip-path="url(#letter-clip)" fill="none" stroke="#fff" stroke-opacity=".30" stroke-width="2">
+      <use href="#letters" transform="translate(0 2)"/>
+    </g>
+    <g clip-path="url(#letter-clip)"><rect class="shine" x="-160" y="0" width="135" height="130" fill="url(#shine)"/></g>
+  </g>
+  <g fill="#78b84e" class="spark">
+    <path d="M51 136h7v7h-7z M61 121h4v4h-4z M940 119h6v6h-6z M929 137h4v4h-4z"/>
+  </g>
+</g>
+</svg>

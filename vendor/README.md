@@ -15,3 +15,8 @@ The original patch notes and transitive data provenance are preserved in
 `seedforge-patches/UPSTREAM.md`. Newer version profiles are experimental.
 Upstream `util.c` strings are unchanged; MCFinder uses its own explicit version
 lookup in `src/bridge.c`. No game assets or server jars are included.
+
+MCFinder local portability patch: `seedforge-patches/msvc-constants.patch` replaces
+three static rational floating-point initializer tables in noise.c with equivalent
+round-trip decimal double literals. MSVC /fp:strict otherwise reports C2099.
+The arithmetic flags and runtime algorithms are unchanged.

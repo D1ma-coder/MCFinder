@@ -168,7 +168,7 @@ python3 examples/backend_client.py --engine ./mcfinder --cores 4
 
 ```toml
 [dependencies]
-mcfinder = { git = "https://github.com/D1ma-coder/MCFinder", tag = "v0.4.0" }
+mcfinder = { git = "https://github.com/D1ma-coder/MCFinder", tag = "v0.4.1" }
 ```
 
 `engine::run(Settings,RunOptions,Control,Observer)` не ставит глобальные обработчики сигналов и не пишет в stdout/stderr. Создавайте новый Control на запуск и быстрый потокобезопасный Observer. pause/resume/cancel/snapshot доступны из другого потока.

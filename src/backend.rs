@@ -161,6 +161,8 @@ mod terrain_tests {
         assert_ne!(g.mansion_base_y_estimate(-2064, -2192), first);
         g.seed(7104);
         assert_eq!(g.mansion_base_y_estimate(-2064, -2192), first);
+        g.seed(4743858);
+        assert!((g.mansion_base_y_estimate(1792, -2416) - 172.44497680664062).abs() < 0.0001);
     }
 
     #[test]
