@@ -45,7 +45,7 @@ Omit `--gpu` when OpenCL is unavailable. Set `--cores` to an available number (t
 
 ### Actual long search in the README screenshot
 
-The TUI reports ~5.8 million tested seeds in 2m08s and a final interval around 47.1K/s, stopping after three emitted candidates with estimated Y≥170. This is a real search observation, **not** a controlled repeated benchmark. Tested work exceeds the committed cursor because a parallel batch can run ahead of the emitted limit. User verified seed `4743858`, X=1792, Z=−2416 in-game and supplied the mansion screenshot.
+The TUI reports ~5.8 million tested seeds in 2m08s and a final interval around 47.1K/s, stopping after three emitted candidates with estimated Y≥170. This is a real search observation, **not** a controlled repeated benchmark. Tested work exceeds the committed cursor because a parallel batch can run ahead of the emitted limit. The in-game mansion example is seed `4743858`, X=1792, Z=−2416.
 
 ### What is not measured
 

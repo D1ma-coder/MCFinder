@@ -26,11 +26,11 @@ Find a shipwreck next to a mansion. Search for a village with useful structures 
 
 ![Actual TUI: three high-mansion candidates in Java 26.2](docs/assets/high-mansion-tui.png)
 
-*Real user-provided screenshot: 10 CPU workers on Apple M2 Pro, three candidates with estimated base Y ≥170. Coordinates and estimated height are separate; this is not a generated block-height measurement.*
+*Actual search results: 10 CPU workers on Apple M2 Pro, three candidates with estimated base Y ≥170. Coordinates and estimated height are separate; this is not a generated block-height measurement.*
 
-![User-found mansion with a towering foundation, shown in Minecraft](docs/assets/mansion-in-game.webp)
+![Mansion with a towering foundation, shown in Minecraft](docs/assets/mansion-in-game.webp)
 
-*A result inspected in-game by the user: a woodland mansion with a towering foundation. **Java 26.2 · seed `4743858` · X=`1792`, Z=`-2416`** (confirmed by the user). Engine estimate: base Y≈172.4; actual foundation height was not measured by the engine.*
+*A woodland mansion found with MCFinder and inspected in-game, with a towering foundation. **Java 26.2 · seed `4743858` · X=`1792`, Z=`-2416`**. Engine estimate: base Y≈172.4; actual foundation height was not measured by the engine.*
 
 ## Why build on MCFinder?
 
